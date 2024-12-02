@@ -101,6 +101,10 @@ http2 = [
     "priority >= 1.1.0, < 2.0",
 ]
 
+websocket = [
+    "wsproto",
+]
+
 all-non-platform = [
     "twisted[test,tls,conch,serial,http2]",
 ]

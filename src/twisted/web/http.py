@@ -921,7 +921,7 @@ class Request:
     etag = None
     lastModified = None
     args = None
-    path = None
+    path: bytes = None  # type:ignore[assignment]
     content = None
     _forceSSL = 0
     _disconnected = False
@@ -2529,6 +2529,12 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         req = self.requests[-1]
         req.requestReceived(command, path, version)
+
+    def upgradeToProtocol(self, protocol: IProtocol) -> None:
+        self.dataReceived = protocol.dataReceived  # type:ignore[method-assign]
+        self.connectionLost = protocol.connectionLost  # type:ignore[method-assign]
+        assert self.transport is not None
+        protocol.makeConnection(self.transport)
 
     def rawDataReceived(self, data: bytes) -> None:
         """
