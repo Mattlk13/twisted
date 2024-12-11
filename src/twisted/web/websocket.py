@@ -1,11 +1,12 @@
 # -*- test-case-name: twisted.web.test.test_websocket -*-
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Generic, Protocol as TypingProtocol, TypeVar
+from dataclasses import dataclass, field
+from typing import Callable, Generic, Protocol as TypingProtocol, TypeVar
 
 from zope.interface import implementer
 
+from hyperlink import parse as parseURL
 from wsproto import Connection, ConnectionType, WSConnection
 from wsproto.events import (
     AcceptConnection,
@@ -16,6 +17,7 @@ from wsproto.events import (
     TextMessage,
 )
 from wsproto.handshake import H11Handshake
+from wsproto.utilities import RemoteProtocolError
 
 from twisted.internet.interfaces import (
     IAddress,
@@ -24,12 +26,13 @@ from twisted.internet.interfaces import (
     IReactorTCP,
     ITransport,
 )
-from twisted.internet.protocol import Protocol
+from twisted.logger import Logger
 from twisted.python.failure import Failure
+from twisted.web._responses import BAD_REQUEST
 from twisted.web.client import URI, BrowserLikePolicyForHTTPS, _StandardEndpointFactory
 from twisted.web.iweb import IAgentEndpointFactory, IPolicyForHTTPS
 from twisted.web.resource import Resource
-from twisted.web.server import NOT_DONE_YET, Request, Request as TRequest
+from twisted.web.server import NOT_DONE_YET, Request
 
 
 class WebSocketTransport(TypingProtocol):
@@ -58,7 +61,10 @@ class WebSocketProtocol(TypingProtocol):
     The receiver of websocket messages.
     """
 
-    transport: WebSocketTransport
+    def makeConnection(self, transport: WebSocketTransport) -> None:
+        """
+        A connection was established.
+        """
 
     def textMessageReceived(self, message: str) -> None:
         """
@@ -90,8 +96,8 @@ class WebSocketClientProtocolFactory(TypingProtocol[_WSP]):
 
 
 @dataclass
-class _WebSocketTransport:
-    _sktprot: _WebSocketServerProtocol | _WebSocketClientProtocol[WebSocketProtocol]
+class _WebSocketTransportImpl:
+    _sktprot: _ByteProtocol[WebSocketProtocol]
 
     def sendTextMessage(self, text: str) -> None:
         t = self._sktprot.transport
@@ -132,68 +138,12 @@ class WebSocketClientEndpoint:
     async def connect(
         self, protocolFactory: WebSocketClientProtocolFactory[_WSP]
     ) -> _WSP:
-        print("connecting")
         endpoint = self.endpointFactory.endpointForURI(
             URI.fromBytes(self.uri.encode("utf-8"))
         )
-        print("endpoint", endpoint)
         d = endpoint.connect(_WebSocketClientProtocolFactory(self, protocolFactory))
-        print("started")
-        connected: _WebSocketClientProtocol[_WSP] = await d
-        print("connected", connected)
-        return connected.wscp
-
-
-@implementer(IProtocol)
-@dataclass
-class _WebSocketClientProtocol(Generic[_WSP]):
-    uri: str
-    wscp: _WSP
-
-    def makeConnection(self, transport: ITransport) -> None:
-        self.transport = transport
-        self.connectionMade()
-
-    def connectionMade(self) -> None:
-        self._wsconn = WSConnection(ConnectionType.CLIENT)
-        from hyperlink import parse as parseURL
-
-        h = parseURL(self.uri)
-        target = str(h.replace(scheme="", host="", port=None))
-        print("target", target)
-        self.transport.write(self._wsconn.send(WSRequest(h.host, target)))
-        self.wscp.transport = _WebSocketTransport(self)
-
-    def dataReceived(self, data: bytes) -> None:
-        _dr(self.transport, self._wsconn, self.wscp, data)
-
-    def connectionLost(self, reason: Failure) -> None:
-        self.wscp.connectionLost(reason)
-
-
-def _dr(
-    transport: ITransport,
-    wsconn: WSConnection | Connection,
-    proto: WebSocketProtocol,
-    data: bytes,
-) -> None:
-    wsconn.receive_data(data)
-    for event in wsconn.events():
-        if isinstance(event, CloseConnection):
-            # TODO: close the connection
-            assert transport is not None
-            transport.write(wsconn.send(event.response()))
-            transport.loseConnection()
-        elif isinstance(event, AcceptConnection):
-            pass
-        elif isinstance(event, TextMessage):
-            proto.textMessageReceived(event.data)
-        elif isinstance(event, BytesMessage):
-            proto.bytesMessageReceived(event.data)
-        elif isinstance(event, Ping):
-            transport.write(wsconn.send(event.response()))
-        else:
-            assert False, f"unhandled message type: {event}"
+        connected: _ByteProtocol[_WSP] = await d
+        return connected._wsp
 
 
 @implementer(IProtocolFactory)
@@ -208,30 +158,73 @@ class _WebSocketClientProtocolFactory(Generic[_WSP]):
     def doStop(self) -> None:
         pass
 
-    def buildProtocol(self, addr: IAddress) -> _WebSocketClientProtocol[_WSP]:
-        return _WebSocketClientProtocol(
-            self.endpoint.uri,
+    def buildProtocol(self, addr: IAddress) -> _ByteProtocol[_WSP]:
+        return _ByteProtocol(
+            WSConnection(ConnectionType.CLIENT),
+            _clientBoot(self.endpoint.uri),
             self.webSocketProtocolFactory.buildProtocol(self.endpoint.uri),
         )
 
 
-class _WebSocketServerProtocol(Protocol):
-    def __init__(self, connection: Connection, protocol: WebSocketProtocol) -> None:
-        self._wsconn = Connection(ConnectionType.SERVER)
-        self._wsproto = protocol
+_Bootstrap = Callable[[WSConnection | Connection, ITransport], None]
+
+
+def _clientBoot(uri: str) -> _Bootstrap:
+    def _(wsc: WSConnection | Connection, t: ITransport) -> None:
+        h = parseURL(uri)
+        target = str(h.replace(scheme="", host="", port=None))
+        t.write(wsc.send(WSRequest(h.host, target)))
+
+    return _
+
+
+@implementer(IProtocol)
+@dataclass
+class _ByteProtocol(Generic[_WSP]):
+    _wsconn: WSConnection | Connection
+    _bootstrap: _Bootstrap
+    _wsp: _WSP
+
+    transport: ITransport = field(init=False)
+
+    def makeConnection(self, transport: ITransport) -> None:
+        self.transport = transport
+        self.connectionMade()
 
     def connectionMade(self) -> None:
-        print("websocket connection made")
-        t = self.transport
-        assert t is not None
-        self._wsproto.transport = _WebSocketTransport(self)
+        self._bootstrap(self._wsconn, self.transport)
+        self._wsp.makeConnection(_WebSocketTransportImpl(self))
 
     def dataReceived(self, data: bytes) -> None:
-        assert self.transport is not None
-        _dr(self.transport, self._wsconn, self._wsproto, data)
+        self._wsconn.receive_data(data)
+        for event in self._wsconn.events():
+            if isinstance(event, CloseConnection):
+                # TODO: close the connection
+                assert self.transport is not None
+                self.transport.write(self._wsconn.send(event.response()))
+                self.transport.loseConnection()
+            elif isinstance(event, AcceptConnection):
+                pass
+            elif isinstance(event, TextMessage):
+                self._wsp.textMessageReceived(event.data)
+            elif isinstance(event, BytesMessage):
+                self._wsp.bytesMessageReceived(event.data)
+            elif isinstance(event, Ping):
+                self.transport.write(self._wsconn.send(event.response()))
+            else:
+                assert False, f"unhandled message type: {event}"
 
-    def connectionLost(self, reason: Failure | None = None) -> None:
-        print("websocket connection lost")
+    def connectionLost(self, reason: Failure) -> None:
+        self._wsp.connectionLost(reason)
+
+
+_log = Logger()
+
+
+def _negotiationError(request: Request) -> bytes:
+    request.setResponseCode(BAD_REQUEST)
+    request.setHeader("content-type", "text/plain")
+    return b"websocket protocol negotiation error"
 
 
 class WebSocketResource(Resource):
@@ -241,32 +234,24 @@ class WebSocketResource(Resource):
         super().__init__()
         self.factory = factory
 
-    def render_GET(self, request: TRequest) -> int:
+    def render_GET(self, request: Request) -> bytes | int:
         handshake = H11Handshake(ConnectionType.SERVER)
-        headers = []
-        for hkey, hvals in request.requestHeaders.getAllRawHeaders():
-            for val in hvals:
-                headers.append((hkey, val))
-        path = request.path
-        print("headers", headers)
-        handshake.initiate_upgrade_connection(headers, path)
-        wsreq = None
-        for evt in handshake.events():
-            if isinstance(evt, WSRequest):
-                wsreq = evt
-            else:
-                print("not request?", evt)
-        assert wsreq is not None, "no request received"
-        print("wsreq?", wsreq)
-        # for k, v in wsreq.extra_headers:
-        #     request.responseHeaders.setRawHeaders(k, [v])
-        toSend = handshake.send(AcceptConnection())
-        print("toSend?", toSend)
-        wscon = handshake.connection
+        raw = request.requestHeaders.getAllRawHeaders()
+        simpleHeaders = [(hkey, val) for hkey, hvals in raw for val in hvals]
+        try:
+            handshake.initiate_upgrade_connection(simpleHeaders, request.path)
+        except RemoteProtocolError as rpe:
+            _log.error("{request} failed with {rpe}", request=request, rpe=rpe)
+            return _negotiationError(request)
         wsprot = self.factory.buildProtocol(request)
-        assert wscon is not None, "connection not accepted"
+        assert wsprot is not None, "connection not accepted by twisted"
+        toSend = handshake.send(AcceptConnection())
+        wscon = handshake.connection
         t = request.channel.transport
-        assert t is not None
-        request.channel.upgradeToProtocol(_WebSocketServerProtocol(wscon, wsprot))
+        assert t is not None, "channel transport not connected"
+        assert wscon is not None, "connection not accepted by wsproto"
+        request.channel.upgradeToProtocol(
+            _ByteProtocol(wscon, lambda ign, ign2: None, wsprot)
+        )
         t.write(toSend)
         return NOT_DONE_YET
