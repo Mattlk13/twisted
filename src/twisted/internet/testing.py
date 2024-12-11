@@ -7,6 +7,7 @@ Assorted functionality which is commonly useful when writing unit tests.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from io import BytesIO
 from socket import AF_INET, AF_INET6
 from time import time
@@ -33,17 +34,22 @@ from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
 from twisted.internet.defer import Deferred, ensureDeferred, succeed
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.internet.interfaces import (
+    IAddress,
     IConnector,
     IConsumer,
+    IHostnameResolver,
+    IHostResolution,
     IListeningPort,
     IProtocol,
     IPushProducer,
     IReactorCore,
     IReactorFDSet,
+    IReactorPluggableNameResolver,
     IReactorSocket,
     IReactorSSL,
     IReactorTCP,
     IReactorUNIX,
+    IResolutionReceiver,
     ITransport,
 )
 from twisted.internet.task import Clock
@@ -414,8 +420,40 @@ class _FakeConnector:
         return self._address
 
 
+@implementer(IHostResolution)
+@dataclass
+class ImmediateResolution:
+    name: str
+
+    def cancel(self) -> None:
+        raise Exception("already resolved")
+
+
+@implementer(IHostnameResolver)
+class ImmediateResolver:
+    def resolveHostName(
+        self,
+        resolutionReceiver: IResolutionReceiver,
+        hostName: str,
+        portNumber: int = 0,
+        addressTypes: Sequence[type[IAddress]] | None = None,
+        transportSemantics: str = "TCP",
+    ) -> IHostResolution:
+        resolution = ImmediateResolution(hostName)
+        resolutionReceiver.resolutionBegan(resolution)
+        resolutionReceiver.addressResolved(IPv4Address("TCP", "127.0.0.1", portNumber))
+        resolutionReceiver.resolutionComplete()
+        return resolution
+
+
 @implementer(
-    IReactorCore, IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket, IReactorFDSet
+    IReactorCore,
+    IReactorTCP,
+    IReactorSSL,
+    IReactorUNIX,
+    IReactorSocket,
+    IReactorFDSet,
+    IReactorPluggableNameResolver,
 )
 class MemoryReactor:
     """
@@ -474,6 +512,8 @@ class MemoryReactor:
         connections added using C{adoptStreamConnection}.
     """
 
+    nameResolver: IHostnameResolver
+
     def __init__(self):
         """
         Initialize the tracking lists.
@@ -500,6 +540,12 @@ class MemoryReactor:
 
         self.readers = set()
         self.writers = set()
+        self.nameResolver = ImmediateResolver()
+
+    def installNameResolver(self, resolver: IHostnameResolver) -> IHostnameResolver:
+        oldResolver = self.nameResolver
+        self.nameResolver = resolver
+        return oldResolver
 
     def install(self):
         """
