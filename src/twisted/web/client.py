@@ -26,7 +26,11 @@ from twisted.internet import defer, protocol, task
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.defer import Deferred
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
-from twisted.internet.interfaces import IOpenSSLContextFactory, IProtocol
+from twisted.internet.interfaces import (
+    IOpenSSLContextFactory,
+    IProtocol,
+    IStreamClientEndpoint,
+)
 from twisted.logger import Logger
 from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
@@ -910,8 +914,15 @@ class _AgentBase:
         return b"%b:%d" % (host, port)
 
     def _requestWithEndpoint(
-        self, key, endpoint, method, parsedURI, headers, bodyProducer, requestPath
-    ):
+        self,
+        key: tuple[bytes, bytes, int],
+        endpoint: IStreamClientEndpoint,
+        method: bytes,
+        parsedURI: URI,
+        headers: Headers | None,
+        bodyProducer: IBodyProducer,
+        requestPath: bytes,
+    ) -> Deferred[IResponse]:
         """
         Issue a new request, given the endpoint and the path sent as part of
         the request.
@@ -1149,7 +1160,13 @@ class Agent(_AgentBase):
         """
         return self._endpointFactory.endpointForURI(uri)
 
-    def request(self, method, uri, headers=None, bodyProducer=None):
+    def request(
+        self,
+        method: bytes,
+        uri: bytes,
+        headers: Optional[Headers] = None,
+        bodyProducer: Optional[IBodyProducer] = None,
+    ) -> Deferred[IResponse]:
         """
         Issue a request to the server indicated by the given C{uri}.
 
