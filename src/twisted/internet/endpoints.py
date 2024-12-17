@@ -18,7 +18,7 @@ import os
 import re
 import socket
 import warnings
-from typing import Any, Callable, Iterable, Optional, Sequence, Type
+from typing import Any, Callable, Iterable, Optional, Sequence, Type, Union
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer
@@ -705,7 +705,7 @@ _gairesult = list[
         socket.SocketKind,
         int,
         str,
-        tuple[str, int] | tuple[str, int, int, int],
+        Union[tuple[str, int], tuple[str, int, int, int]],
     ]
 ]
 """

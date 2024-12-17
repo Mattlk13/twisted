@@ -15,7 +15,7 @@ import zlib
 from dataclasses import dataclass
 from functools import wraps
 from http.cookiejar import CookieJar
-from typing import TYPE_CHECKING, Iterable, Optional
+from typing import TYPE_CHECKING, Hashable, Iterable, Optional
 from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
 
 from zope.interface import implementer
@@ -27,8 +27,10 @@ from twisted.internet.abstract import isIPv6Address
 from twisted.internet.defer import Deferred
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.internet.interfaces import (
+    IAddress,
     IOpenSSLContextFactory,
     IProtocol,
+    IReactorTime,
     IStreamClientEndpoint,
 )
 from twisted.logger import Logger
@@ -662,7 +664,7 @@ class _HTTP11ClientFactory(protocol.Factory):
             self._quiescentCallback, self._metadata
         )
 
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr: IAddress) -> HTTP11ClientProtocol:
         return HTTP11ClientProtocol(self._quiescentCallback)
 
 
@@ -781,7 +783,9 @@ class HTTPConnectionPool:
         self._connections = {}
         self._timeouts = {}
 
-    def getConnection(self, key, endpoint):
+    def getConnection(
+        self, key: Hashable, endpoint: IStreamClientEndpoint
+    ) -> Deferred[HTTP11ClientProtocol]:
         """
         Supply a connection, newly created or retrieved from the pool, to be
         used for one HTTP request.
@@ -819,7 +823,9 @@ class HTTPConnectionPool:
 
         return self._newConnection(key, endpoint)
 
-    def _newConnection(self, key, endpoint):
+    def _newConnection(
+        self, key: Hashable, endpoint: IStreamClientEndpoint
+    ) -> Deferred[HTTP11ClientProtocol]:
         """
         Create a new connection.
 
@@ -830,7 +836,10 @@ class HTTPConnectionPool:
             self._putConnection(key, protocol)
 
         factory = self._factory(quiescentCallback, repr(endpoint))
-        return endpoint.connect(factory)
+        result: Deferred[HTTP11ClientProtocol] = endpoint.connect(
+            factory
+        )  # type:ignore[assignment]
+        return result
 
     def _removeConnection(self, key, connection):
         """
@@ -896,7 +905,7 @@ class _AgentBase:
     @ivar _pool: The L{HTTPConnectionPool} used to manage HTTP connections.
     """
 
-    def __init__(self, reactor, pool):
+    def __init__(self, reactor: IReactorTime, pool: HTTPConnectionPool | None) -> None:
         if pool is None:
             pool = HTTPConnectionPool(reactor, False)
         self._reactor = reactor
@@ -920,7 +929,7 @@ class _AgentBase:
         method: bytes,
         parsedURI: URI,
         headers: Headers | None,
-        bodyProducer: IBodyProducer,
+        bodyProducer: IBodyProducer | None,
         requestPath: bytes,
     ) -> Deferred[IResponse]:
         """
@@ -946,7 +955,7 @@ class _AgentBase:
 
         d = self._pool.getConnection(key, endpoint)
 
-        def cbConnected(proto):
+        def cbConnected(proto: HTTP11ClientProtocol) -> Deferred[IResponse]:
             return proto.request(
                 Request._construct(
                     method,
@@ -958,8 +967,7 @@ class _AgentBase:
                 )
             )
 
-        d.addCallback(cbConnected)
-        return d
+        return d.addCallback(cbConnected)
 
 
 @implementer(IAgentEndpointFactory)
