@@ -6,6 +6,7 @@ Test the C{I...Endpoint} implementations that wrap the L{IReactorTCP},
 L{IReactorSSL}, and L{IReactorUNIX} interfaces found in
 L{twisted.internet.endpoints}.
 """
+from __future__ import annotations
 
 from abc import abstractmethod
 from errno import EPERM
