@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, Generic, Protocol as TypingProtocol, TypeVar
+from typing import Callable, Generic, Protocol as TypingProtocol, TypeVar, Union
 
 from zope.interface import implementer
 
@@ -166,7 +166,7 @@ class _WebSocketClientProtocolFactory(Generic[_WSP]):
         )
 
 
-_Bootstrap = Callable[[WSConnection | Connection, ITransport], None]
+_Bootstrap = Callable[[Union[WSConnection, Connection], ITransport], None]
 
 
 def _clientBoot(uri: str) -> _Bootstrap:
