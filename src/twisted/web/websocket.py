@@ -6,7 +6,7 @@ from typing import Callable, Generic, Protocol as TypingProtocol, TypeVar, Union
 
 from zope.interface import implementer
 
-from hyperlink import parse as parseURL
+from hyperlink import URL
 from wsproto import Connection, ConnectionType, WSConnection
 from wsproto.events import (
     AcceptConnection,
@@ -171,7 +171,7 @@ _Bootstrap = Callable[[Union[WSConnection, Connection], ITransport], None]
 
 def _clientBoot(uri: str) -> _Bootstrap:
     def _(wsc: WSConnection | Connection, t: ITransport) -> None:
-        h = parseURL(uri)
+        h = URL.fromText(uri)
         target = str(h.replace(scheme="", host="", port=None))
         t.write(wsc.send(WSRequest(h.host, target)))
 
