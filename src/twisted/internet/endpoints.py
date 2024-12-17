@@ -18,7 +18,7 @@ import os
 import re
 import socket
 import warnings
-from typing import Any, Callable, Iterable, Optional, Sequence, Type, Union
+from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, Type, Union
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer
@@ -699,13 +699,16 @@ class TCP6ClientEndpoint:
             return defer.fail()
 
 
-_gairesult = list[
-    tuple[
+_gairesult = List[
+    Tuple[
         socket.AddressFamily,
         socket.SocketKind,
         int,
         str,
-        Union[tuple[str, int], tuple[str, int, int, int]],
+        Union[
+            Tuple[str, int],
+            Tuple[str, int, int, int],
+        ],
     ]
 ]
 """
