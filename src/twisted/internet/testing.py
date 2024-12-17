@@ -807,7 +807,13 @@ class MemoryReactorClock(MemoryReactor, Clock):
         Clock.__init__(self)
 
 
-@implementer(IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
+@implementer(
+    IReactorTCP,
+    IReactorSSL,
+    IReactorUNIX,
+    IReactorSocket,
+    IReactorPluggableNameResolver,
+)
 class RaisingMemoryReactor:
     """
     A fake reactor to be used in tests.  It accepts TCP connection setup
@@ -817,7 +823,11 @@ class RaisingMemoryReactor:
     @ivar _connectException: An instance of an L{Exception}
     """
 
-    def __init__(self, listenException=None, connectException=None):
+    def __init__(
+        self,
+        listenException: Exception | None = None,
+        connectException: Exception | None = None,
+    ) -> None:
         """
         @param listenException: An instance of an L{Exception} to raise
             when any C{listen} method is called.
@@ -827,6 +837,11 @@ class RaisingMemoryReactor:
         """
         self._listenException = listenException
         self._connectException = connectException
+        self.nameResolver: IHostnameResolver = ImmediateResolver()
+
+    def installNameResolver(self, nameResolver: IHostnameResolver) -> IHostnameResolver:
+        previous, self.nameResolver = self.nameResolver, nameResolver
+        return previous
 
     def adoptStreamPort(self, fileno, addressFamily, factory):
         """

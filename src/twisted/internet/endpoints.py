@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.internet.test.test_endpoints -*-
+# -*- test-case-name: twisted.internet.test.test_endpoints.HostnameEndpointMemoryIPv4ReactorTests.test_errorsLogged -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -18,7 +18,7 @@ import os
 import re
 import socket
 import warnings
-from typing import Any, Iterable, Optional, Sequence, Type
+from typing import Any, Callable, Iterable, Optional, Sequence, Type
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer
@@ -699,6 +699,20 @@ class TCP6ClientEndpoint:
             return defer.fail()
 
 
+_gairesult = list[
+    tuple[
+        socket.AddressFamily,
+        socket.SocketKind,
+        int,
+        str,
+        tuple[str, int] | tuple[str, int, int, int],
+    ]
+]
+"""
+Alias for the result type of L{socket.getaddrinfo}C{()}
+"""
+
+
 @implementer(IHostnameResolver)
 class _SimpleHostnameResolver:
     """
@@ -714,7 +728,9 @@ class _SimpleHostnameResolver:
 
     _log = Logger()
 
-    def __init__(self, nameResolution):
+    def __init__(
+        self, nameResolution: Callable[[str, int], Deferred[_gairesult]]
+    ) -> None:
         """
         Create a L{_SimpleHostnameResolver} instance.
         """
@@ -847,7 +863,7 @@ class HostnameEndpoint:
         """
 
         self._reactor = reactor
-        self._nameResolver = self._getNameResolverAndMaybeWarn(reactor)
+        self._getNameResolverAndMaybeWarn(reactor)
         [self._badHostname, self._hostBytes, self._hostText] = self._hostAsBytesAndText(
             host
         )
@@ -990,7 +1006,8 @@ class HostnameEndpoint:
             def resolutionComplete() -> None:
                 resolved.callback(addresses)
 
-        self._nameResolver.resolveHostName(
+        nameResolver = self._getNameResolverAndMaybeWarn(self._reactor)
+        nameResolver.resolveHostName(
             EndpointReceiver(), self._hostText, portNumber=self._port
         )
 
