@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from unittest import skipIf
+
 from twisted.internet.defer import Deferred
 from twisted.internet.testing import MemoryReactorClock
 from twisted.python.failure import Failure
@@ -13,48 +17,53 @@ from twisted.web.client import (
 from twisted.web.iweb import IRequest
 from twisted.web.resource import Resource
 from twisted.web.server import Site
-from twisted.web.websocket import (
-    WebSocketClientEndpoint,
-    WebSocketClientProtocolFactory,
-    WebSocketProtocol,
-    WebSocketResource,
-    WebSocketServerProtocolFactory,
-    WebSocketTransport,
-)
+
+shouldSkip = False
+try:
+    __import__("wsproto")
+except ImportError:
+    shouldSkip = True
+else:
+    from twisted.web.websocket import (
+        WebSocketClientEndpoint,
+        WebSocketClientProtocolFactory,
+        WebSocketProtocol,
+        WebSocketResource,
+        WebSocketServerProtocolFactory,
+        WebSocketTransport,
+    )
+
+    class MyWSP(WebSocketProtocol):
+        def makeConnection(self, transport: WebSocketTransport) -> None:
+            self.transport = transport
+
+        def connectionLost(self, reason: Failure) -> None:
+            pass
+
+        def bytesMessageReceived(self, data: bytes) -> None:
+            pass
+
+        def textMessageReceived(self, data: str) -> None:
+            if data == "request":
+                self.transport.sendTextMessage("response")
+            else:
+                self.deferred.callback(data)
+
+        def sendRequest(self) -> Deferred[str]:
+            self.deferred: Deferred[str] = Deferred()
+            self.transport.sendTextMessage("request")
+            return self.deferred
+
+    class MyFactory(WebSocketServerProtocolFactory[MyWSP]):
+        def buildProtocol(self, request: IRequest) -> MyWSP:
+            return MyWSP()
+
+    class MyClientFactory(WebSocketClientProtocolFactory[MyWSP]):
+        def buildProtocol(self, uri: str) -> MyWSP:
+            return MyWSP()
 
 
-class MyWSP(WebSocketProtocol):
-    def makeConnection(self, transport: WebSocketTransport) -> None:
-        self.transport = transport
-
-    def connectionLost(self, reason: Failure) -> None:
-        pass
-
-    def bytesMessageReceived(self, data: bytes) -> None:
-        pass
-
-    def textMessageReceived(self, data: str) -> None:
-        if data == "request":
-            self.transport.sendTextMessage("response")
-        else:
-            self.deferred.callback(data)
-
-    def sendRequest(self) -> Deferred[str]:
-        self.deferred: Deferred[str] = Deferred()
-        self.transport.sendTextMessage("request")
-        return self.deferred
-
-
-class MyFactory(WebSocketServerProtocolFactory[MyWSP]):
-    def buildProtocol(self, request: IRequest) -> MyWSP:
-        return MyWSP()
-
-
-class MyClientFactory(WebSocketClientProtocolFactory[MyWSP]):
-    def buildProtocol(self, uri: str) -> MyWSP:
-        return MyWSP()
-
-
+@skipIf(shouldSkip, "wsproto library required for websockets")
 class WebSocketTests(SynchronousTestCase):
     def test_websocket(self) -> None:
         mrc = MemoryReactorClock()
