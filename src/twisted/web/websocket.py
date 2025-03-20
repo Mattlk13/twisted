@@ -14,12 +14,14 @@ from wsproto.events import (
     BytesMessage,
     CloseConnection,
     Ping,
+    Pong,
     Request as WSRequest,
     TextMessage,
 )
 from wsproto.handshake import H11Handshake
 from wsproto.utilities import RemoteProtocolError
 
+from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     IAddress,
     IProtocol,
@@ -56,6 +58,11 @@ class WebSocketTransport(TypingProtocol):
         Drop the websocket connection.
         """
 
+    def ping(self, payload: bytes = b"") -> Deferred[bytes]:
+        """
+        Send a 'ping' request to measure latency.
+        """
+
 
 class WebSocketProtocol(TypingProtocol):
     """
@@ -65,6 +72,11 @@ class WebSocketProtocol(TypingProtocol):
     def makeConnection(self, transport: WebSocketTransport) -> None:
         """
         A connection was established.
+        """
+
+    def pongReceived(self, payload: bytes) -> None:
+        """
+        A 'pong' message was received.
         """
 
     def textMessageReceived(self, message: str) -> None:
@@ -109,6 +121,11 @@ class _WebSocketTransportImpl:
         t = self._sktprot.transport
         assert t is not None
         t.write(self._sktprot._wsconn.send(BytesMessage(data)))
+
+    def ping(self, payload: bytes = b"") -> None:
+        t = self._sktprot.transport
+        assert t is not None
+        t.write(self._sktprot._wsconn.send(Ping(payload)))
 
     def loseConnection(self, code: int = 1000, reason: str = "") -> None:
         t = self._sktprot.transport
@@ -213,6 +230,8 @@ class _ByteProtocol(Generic[_WSP]):
                 self._wsp.bytesMessageReceived(event.data)
             elif isinstance(event, Ping):
                 self.transport.write(self._wsconn.send(event.response()))
+            elif isinstance(event, Pong):
+                self._wsp.pongReceived(event.payload)
             else:
                 assert False, f"unhandled message type: {event}"
 

@@ -31,7 +31,9 @@ else:
         WebSocketTransport,
     )
 
+    @dataclass
     class MyWSP(WebSocketProtocol):
+        pongs: list[bytes] = field(default_factory=list)
         wasLost: Failure | None = None
 
         def makeConnection(self, transport: WebSocketTransport) -> None:
@@ -51,6 +53,9 @@ else:
                 self.transport.sendTextMessage("response")
             else:
                 self.deferred.callback(data)
+
+        def pongReceived(self, payload: bytes) -> None:
+            self.pongs.append(payload)
 
         def sendRequest(self) -> Deferred[str]:
             """
@@ -148,6 +153,16 @@ class WebSocketTests(SynchronousTestCase):
         self.assertNoResult(bRequested)
         pump.flush()
         self.assertEqual(self.successResultOf(bRequested), b"\x00resp\x01onse\xff")
+
+    def test_pingPong(self) -> None:
+        fixture = WebSocketFixture.new(MyClientFactory())
+        connected = Deferred.fromCoroutine(fixture.connect())
+        pump = fixture.complete()
+        wsp = self.successResultOf(connected)
+        wsp.transport.ping(b"123")
+        self.assertEqual(wsp.pongs, [])
+        pump.flush()
+        self.assertEqual(wsp.pongs, [b"123"])
 
     def test_serverConnectionLost(self) -> None:
         fixture = WebSocketFixture.new(MyClientFactory())
