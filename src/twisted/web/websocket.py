@@ -171,10 +171,10 @@ class _WebSocketClientProtocolFactory(Generic[_WSP]):
     webSocketProtocolFactory: WebSocketClientProtocolFactory[_WSP]
 
     def doStart(self) -> None:
-        pass
+        ...
 
     def doStop(self) -> None:
-        pass
+        ...
 
     def buildProtocol(self, addr: IAddress) -> _ByteProtocol[_WSP]:
         return _ByteProtocol(
