@@ -10,12 +10,7 @@ from twisted.python.failure import Failure
 from twisted.test.iosim import ConnectionCompleter, IOPump
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.web._responses import BAD_REQUEST
-from twisted.web.client import (
-    Agent,
-    BrowserLikePolicyForHTTPS,
-    _StandardEndpointFactory,
-    readBody,
-)
+from twisted.web.client import Agent, readBody
 from twisted.web.iweb import IRequest
 from twisted.web.resource import Resource
 from twisted.web.server import Site
@@ -109,12 +104,8 @@ class WebSocketFixture(Generic[WSP]):
         return self
 
     async def connect(self) -> WSP:
-        client = WebSocketClientEndpoint(
-            # TODO: Oops, _StandardEndpointFactory is not public API
-            _StandardEndpointFactory(
-                self.reactor, BrowserLikePolicyForHTTPS(), None, None
-            ),
-            "http://localhost:80/connect",
+        client = WebSocketClientEndpoint.new(
+            self.reactor, "http://localhost:80/connect"
         )
         return await client.connect(self.clientFactory)
 
@@ -187,6 +178,5 @@ class WebSocketTests(SynchronousTestCase):
         self.assertEqual(r.code, BAD_REQUEST)
         body = readBody(r)
         self.assertEqual(
-            self.successResultOf(body),
-            b"websocket protocol negotiation error",
+            self.successResultOf(body), b"websocket protocol negotiation error"
         )
