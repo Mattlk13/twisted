@@ -101,17 +101,22 @@ jobs:
 
           # `nodeps` is created to make sure we don't have import errors in the
           # runtime and production code.
+
           # The minimum supported Python version should be used to maximize
           # coverage of code that otherwise depends on backports.
+
           # Distributed test run is disabled here so that we also have
           # end to end functional test usage for non-distributed trial runs.
           # When updating the minimum Python version here, also update the
           # `python_requires` from `setup.cfg`.
-          - python-version: '3.8.0'
+          # Here we should have the oldest Python version supported 
+          # by GitHub. The availability of the Python version
+          # depends on the version of Ubuntu in use. 
+          # See https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
+          - python-version: '3.8.12'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
-            # Older pyhon is only on 20.04.
-            runs-on: 'ubuntu-20.04'
+            runs-on: 'ubuntu-22.04'
 
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
@@ -484,14 +489,14 @@ jobs:
       run: |
         tox -e narrativedocs
 
-
-  # Used for various release automation.
+  # Used for various release automation, but not for publishing, as publishing needs extra permissions for the API token.
+  # So we isolate the actual publish step in a separate job.
   # This is also executed for each PR to exercise the release as much
   # as possible and reduce the possibility of finding bugs in the release
   # process late in the release cycle,
-  # The files are published only when a tag is created.
-  release-publish:
-    name: Check release and publish on twisted-* tag
+  # The files are published only when a tag is created using the next job, release-publish
+  release-build:
+    name: Build and check release, then upload artifact
     runs-on: 'ubuntu-22.04'
     steps:
     - uses: actions/checkout@v4
@@ -513,15 +518,39 @@ jobs:
       run: |
         ls -R dist/
 
+    - uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist
+
     - name: Check matched tag version and branch version - on tag
       if: startsWith(github.ref, 'refs/tags/twisted-')
       run: python admin/check_tag_version_match.py "${{ github.ref }}"
 
-    - name: Publish to PyPI - on tag
-      if: startsWith(github.ref, 'refs/tags/twisted-')
-      uses: pypa/gh-action-pypi-publish@v1.5.1
+  # Used exclusively for PyPi release publishing.
+  # This is only executed on tags and only does the publishing.
+  # The actual build is done by `release-build` job,
+  # which is executed for each PR to help detect release
+  # defects during the normal development cycle.
+  release-publish:
+    needs:
+      release-build
+    if: startsWith(github.ref, 'refs/tags/twisted-')
+    environment:
+      release
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
+    name: publish on twisted-* tag
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v4
       with:
-        password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
+        name: dist
+        path: dist
+
+    - name: Publish to PyPI - on tag
+      uses: pypa/gh-action-pypi-publish@v1.12.2
 
 
   # We have this job so that the PR can be blocked on a single job.
@@ -541,7 +570,7 @@ jobs:
       - narrativedocs
       - apidocs
       - static-checks
-      - release-publish
+      - release-build
       - coverage-report
     steps:
       - name: Require all successes
