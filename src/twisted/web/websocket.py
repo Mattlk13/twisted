@@ -8,6 +8,7 @@ from zope.interface import implementer
 
 from hyperlink import URL
 from wsproto import Connection, ConnectionType, WSConnection
+from wsproto.connection import ConnectionState
 from wsproto.events import (
     AcceptConnection,
     BytesMessage,
@@ -201,7 +202,8 @@ class _ByteProtocol(Generic[_WSP]):
             if isinstance(event, CloseConnection):
                 # TODO: close the connection
                 assert self.transport is not None
-                self.transport.write(self._wsconn.send(event.response()))
+                if self._wsconn.state != ConnectionState.CLOSED:
+                    self.transport.write(self._wsconn.send(event.response()))
                 self.transport.loseConnection()
             elif isinstance(event, AcceptConnection):
                 pass
