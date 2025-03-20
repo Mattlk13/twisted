@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 from unittest import skipIf
 
 from twisted.internet.defer import Deferred
@@ -20,6 +20,7 @@ from twisted.web.iweb import IRequest
 from twisted.web.resource import Resource
 from twisted.web.server import Site
 
+WSP = TypeVar("WSP", bound="WebSocketProtocol")
 shouldSkip = False
 try:
     __import__("wsproto")
@@ -36,14 +37,19 @@ else:
     )
 
     class MyWSP(WebSocketProtocol):
+        wasLost: Failure | None = None
+
         def makeConnection(self, transport: WebSocketTransport) -> None:
             self.transport = transport
 
         def connectionLost(self, reason: Failure) -> None:
-            pass
+            self.wasLost = reason
 
         def bytesMessageReceived(self, data: bytes) -> None:
-            pass
+            if data == b"request":
+                self.transport.sendBytesMessage(b"\x00resp\x01onse\xff")
+            else:
+                self.bDeferred.callback(data)
 
         def textMessageReceived(self, data: str) -> None:
             if data == "request":
@@ -52,20 +58,35 @@ else:
                 self.deferred.callback(data)
 
         def sendRequest(self) -> Deferred[str]:
+            """
+            Send a text message to the server and expect a response.
+            """
             self.deferred: Deferred[str] = Deferred()
             self.transport.sendTextMessage("request")
             return self.deferred
 
+        def bytesRequest(self) -> Deferred[bytes]:
+            """
+            Send a bytes message to the server and expect a response.
+            """
+            self.bDeferred: Deferred[bytes] = Deferred()
+            self.transport.sendBytesMessage(b"request")
+            return self.bDeferred
+
+        def goodbye(self) -> None:
+            self.transport.loseConnection()
+
     class MyFactory(WebSocketServerProtocolFactory[MyWSP]):
+        fixture: WebSocketFixture[Any]
+
         def buildProtocol(self, request: IRequest) -> MyWSP:
-            return MyWSP()
+            new = MyWSP()
+            self.fixture.servers.append(new)
+            return new
 
     class MyClientFactory(WebSocketClientProtocolFactory[MyWSP]):
         def buildProtocol(self, uri: str) -> MyWSP:
             return MyWSP()
-
-
-WSP = TypeVar("WSP", bound="WebSocketProtocol")
 
 
 @dataclass
@@ -74,13 +95,16 @@ class WebSocketFixture(Generic[WSP]):
     reactor: MemoryReactorClock = field(default_factory=MemoryReactorClock)
     resource: Resource = field(default_factory=Resource)
     portNumber: int = 80
+    servers: list[WSP] = field(default_factory=list)
 
     @classmethod
     def new(
         cls, clientFactory: WebSocketClientProtocolFactory[WSP]
     ) -> WebSocketFixture[WSP]:
         self = cls(clientFactory)
-        self.resource.putChild(b"connect", WebSocketResource(MyFactory()))
+        serverFactory = MyFactory()
+        serverFactory.fixture = self
+        self.resource.putChild(b"connect", WebSocketResource(serverFactory))
         self.reactor.listenTCP(self.portNumber, Site(self.resource))
         return self
 
@@ -123,6 +147,30 @@ class WebSocketTests(SynchronousTestCase):
         self.assertNoResult(requested)
         pump.flush()
         self.assertEqual(self.successResultOf(requested), "response")
+
+    def test_bytesMessage(self) -> None:
+        fixture = WebSocketFixture.new(MyClientFactory())
+        connected = Deferred.fromCoroutine(fixture.connect())
+        pump = fixture.complete()
+        wsp = self.successResultOf(connected)
+        bRequested = wsp.bytesRequest()
+        self.assertNoResult(bRequested)
+        pump.flush()
+        self.assertEqual(self.successResultOf(bRequested), b"\x00resp\x01onse\xff")
+
+    def test_serverConnectionLost(self) -> None:
+        fixture = WebSocketFixture.new(MyClientFactory())
+        connected = Deferred.fromCoroutine(fixture.connect())
+        pump = fixture.complete()
+        wsp = self.successResultOf(connected)
+        self.assertIs(fixture.servers[0].wasLost, None)
+        self.assertIs(wsp.wasLost, None)
+        wsp.goodbye()
+        self.assertIs(fixture.servers[0].wasLost, None)
+        self.assertIs(wsp.wasLost, None)
+        pump.flush()
+        self.assertIsNot(fixture.servers[0].wasLost, None)
+        self.assertIsNot(wsp.wasLost, None)
 
     def test_bad(self) -> None:
         """
