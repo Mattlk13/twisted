@@ -535,13 +535,15 @@ class ConnectionCompleter:
                     serverProtocol = serverFactory.buildProtocol(None)
                     serverTransport = makeFakeServer(serverProtocol)
                     clientTransport = makeFakeClient(clientProtocol)
-                    return connect(
+                    result: IOPump = connect(
                         serverProtocol,
                         serverTransport,
                         clientProtocol,
                         clientTransport,
                         debug,
                     )
+                    return result
+        return None
 
     def failOnce(self, reason: Failure = Failure(ConnectionRefusedError())) -> None:
         """
