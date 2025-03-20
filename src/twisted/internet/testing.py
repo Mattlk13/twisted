@@ -426,7 +426,11 @@ class ImmediateResolution:
     name: str
 
     def cancel(self) -> None:
-        raise Exception("already resolved")
+        """
+        Provided just for interface compliance; it should be impossible to
+        reach here, since it's resolved immediately.
+        """
+        raise Exception("already resolved")  # pragma: no cover
 
 
 @implementer(IHostnameResolver)
