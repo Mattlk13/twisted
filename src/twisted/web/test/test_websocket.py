@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+from typing import Generic, TypeVar
 from unittest import skipIf
 
 from twisted.internet.defer import Deferred
 from twisted.internet.testing import MemoryReactorClock
 from twisted.python.failure import Failure
-from twisted.test.iosim import ConnectionCompleter
+from twisted.test.iosim import ConnectionCompleter, IOPump
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.web._responses import BAD_REQUEST
 from twisted.web.client import (
@@ -63,23 +65,59 @@ else:
             return MyWSP()
 
 
+WSP = TypeVar("WSP", bound="WebSocketProtocol")
+
+
+@dataclass
+class WebSocketFixture(Generic[WSP]):
+    clientFactory: WebSocketClientProtocolFactory[WSP] = field()
+    reactor: MemoryReactorClock = field(default_factory=MemoryReactorClock)
+    resource: Resource = field(default_factory=Resource)
+    portNumber: int = 80
+
+    @classmethod
+    def new(
+        cls, clientFactory: WebSocketClientProtocolFactory[WSP]
+    ) -> WebSocketFixture[WSP]:
+        self = cls(clientFactory)
+        self.resource.putChild(b"connect", WebSocketResource(MyFactory()))
+        self.reactor.listenTCP(self.portNumber, Site(self.resource))
+        return self
+
+    async def connect(self) -> WSP:
+        client = WebSocketClientEndpoint(
+            # TODO: Oops, _StandardEndpointFactory is not public API
+            _StandardEndpointFactory(
+                self.reactor, BrowserLikePolicyForHTTPS(), None, None
+            ),
+            "http://localhost:80/connect",
+        )
+        return await client.connect(self.clientFactory)
+
+    def complete(self) -> IOPump:
+        """
+        There should be a single connection in progress; complete it.
+        """
+        completer = ConnectionCompleter(self.reactor)
+        succeeded = completer.succeedOnce()
+        assert succeeded is not None, "Connection not in progress."
+        return succeeded
+
+
 @skipIf(shouldSkip, "wsproto library required for websockets")
 class WebSocketTests(SynchronousTestCase):
     def test_websocket(self) -> None:
-        mrc = MemoryReactorClock()
-        resource = Resource()
-        resource.putChild(b"connect", WebSocketResource(MyFactory()))
-        mrc.listenTCP(80, Site(resource))
-        client = WebSocketClientEndpoint(
-            _StandardEndpointFactory(mrc, BrowserLikePolicyForHTTPS(), None, None),
-            "http://localhost:80/connect",
-        )
-        connected = Deferred.fromCoroutine(client.connect(MyClientFactory()))
+        """
+        Connecting to a websocket server (installed with L{WebSocketResource})
+        from a websocket client (connected with L{WebSocketClientEndpoint})
+        results in a websocket connection.
+        """
+        fixture = WebSocketFixture.new(MyClientFactory())
+        connected = Deferred.fromCoroutine(fixture.connect())
         self.assertNoResult(connected)
-        self.assertEqual(len(mrc.tcpServers), 1)
-        self.assertEqual(len(mrc.tcpClients), 1)
-        cc = ConnectionCompleter(mrc)
-        pump = cc.succeedOnce()
+        self.assertEqual(len(fixture.reactor.tcpServers), 1)
+        self.assertEqual(len(fixture.reactor.tcpClients), 1)
+        pump = fixture.complete()
         wsp = self.successResultOf(connected)
         requested = wsp.sendRequest()
         self.assertNoResult(requested)
@@ -87,16 +125,16 @@ class WebSocketTests(SynchronousTestCase):
         self.assertEqual(self.successResultOf(requested), "response")
 
     def test_bad(self) -> None:
-        mrc = MemoryReactorClock()
-        resource = Resource()
-        resource.putChild(b"connect", WebSocketResource(MyFactory()))
-        mrc.listenTCP(80, Site(resource))
-        agent = Agent(mrc)
+        """
+        Attempting to issue an C{HTTP GET} against a websocket server
+        (installed with L{WebSocketResource}) results in a C{BAD_REQUEST}
+        response.
+        """
+        fixture = WebSocketFixture.new(MyClientFactory())
+        agent = Agent(fixture.reactor)
         response = agent.request(b"GET", b"http://localhost/connect")
         self.assertNoResult(response)
-        cc = ConnectionCompleter(mrc)
-        pump = cc.succeedOnce()
-        self.assertIsNot(pump, None)
+        fixture.complete()
         r = self.successResultOf(response)
         self.assertEqual(r.code, BAD_REQUEST)
         body = readBody(r)
