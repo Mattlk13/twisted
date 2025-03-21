@@ -15,6 +15,8 @@ from wsproto.events import (
     CloseConnection,
     Ping,
     Pong,
+    RejectConnection,
+    RejectData,
     Request as WSRequest,
     TextMessage,
 )
@@ -229,7 +231,11 @@ class _ByteProtocol(Generic[_WSP]):
                     self.transport.write(self._wsconn.send(event.response()))
                 self.transport.loseConnection()
             elif isinstance(event, AcceptConnection):
-                pass
+                ...  # TODO: handle connection acceptance step explicitly
+            elif isinstance(event, RejectConnection):
+                ...  # TODO: handle connection rejection
+            elif isinstance(event, RejectData):
+                ...  # TODO: handle connection rejection response payload data
             elif isinstance(event, TextMessage):
                 self._wsp.textMessageReceived(event.data)
             elif isinstance(event, BytesMessage):
