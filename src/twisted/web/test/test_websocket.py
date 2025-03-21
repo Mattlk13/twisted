@@ -17,7 +17,6 @@ from twisted.web.iweb import IRequest
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Request, Site
 from twisted.web.static import Data
-from twisted.web.websocket import ConnectionRejected
 
 WSP = TypeVar("WSP", bound="WebSocketProtocol")
 shouldSkip = False
@@ -51,11 +50,12 @@ except ImportError:
     shouldSkip = True
 else:
     from twisted.web.websocket import (
+        ConnectionRejected,
         WebSocketClientEndpoint,
-        WebSocketClientProtocolFactory,
+        WebSocketClientFactory,
         WebSocketProtocol,
         WebSocketResource,
-        WebSocketServerProtocolFactory,
+        WebSocketServerFactory,
         WebSocketTransport,
     )
 
@@ -107,7 +107,7 @@ else:
         def goodbye(self) -> None:
             self.transport.loseConnection()
 
-    class MyFactory(WebSocketServerProtocolFactory[MyWSP]):
+    class MyFactory(WebSocketServerFactory[MyWSP]):
         fixture: WebSocketFixture[Any]
 
         def buildProtocol(self, request: IRequest) -> MyWSP:
@@ -115,14 +115,14 @@ else:
             self.fixture.servers.append(new)
             return new
 
-    class MyClientFactory(WebSocketClientProtocolFactory[MyWSP]):
+    class MyClientFactory(WebSocketClientFactory[MyWSP]):
         def buildProtocol(self, uri: str) -> MyWSP:
             return MyWSP()
 
 
 @dataclass
 class WebSocketFixture(Generic[WSP]):
-    clientFactory: WebSocketClientProtocolFactory[WSP] = field()
+    clientFactory: WebSocketClientFactory[WSP] = field()
     reactor: MemoryReactorClock = field(default_factory=MemoryReactorClock)
     resource: Resource = field(default_factory=Resource)
     portNumber: int = 80
@@ -130,9 +130,7 @@ class WebSocketFixture(Generic[WSP]):
     slowResource: SlowResource = field(default_factory=SlowResource)
 
     @classmethod
-    def new(
-        cls, clientFactory: WebSocketClientProtocolFactory[WSP]
-    ) -> WebSocketFixture[WSP]:
+    def new(cls, clientFactory: WebSocketClientFactory[WSP]) -> WebSocketFixture[WSP]:
         self = cls(clientFactory)
         serverFactory = MyFactory()
         serverFactory.fixture = self
