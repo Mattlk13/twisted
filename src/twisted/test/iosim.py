@@ -512,7 +512,7 @@ class ConnectionCompleter:
         """
         self._reactor = memoryReactor
 
-    def succeedOnce(self, debug: bool = False) -> IOPump | None:
+    def succeedOnce(self, debug: bool = False, greet: bool = True) -> IOPump | None:
         """
         Complete a single TCP connection established on this
         L{ConnectionCompleter}'s L{MemoryReactor}.
@@ -541,6 +541,7 @@ class ConnectionCompleter:
                         clientProtocol,
                         clientTransport,
                         debug,
+                        greet=greet,
                     )
                     return result
         return None
