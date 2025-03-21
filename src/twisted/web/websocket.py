@@ -268,14 +268,6 @@ class _ByteProtocol(Generic[_WSP]):
 
 
 @_handleEvent.register
-def _handle_closeConnection(event: CloseConnection, proto: _ByteProtocol[_WSP]) -> None:
-    assert proto.transport is not None
-    if proto._wsconn.state != ConnectionState.CLOSED:
-        proto.transport.write(proto._wsconn.send(event.response()))
-    proto.transport.loseConnection()
-
-
-@_handleEvent.register
 def _handle_acceptConnection(
     event: AcceptConnection, proto: _ByteProtocol[_WSP]
 ) -> None:
@@ -301,6 +293,8 @@ def _handle_rejectData(event: RejectData, proto: _ByteProtocol[_WSP]) -> None:
         proto._rejectResponse is not None
     ), "response should never be None when receiving RejectData"
     proto._rejectResponse._bodyDataReceived(event.data)
+    if event.body_finished:
+        proto.transport.loseConnection()
 
 
 @_handleEvent.register
@@ -321,6 +315,14 @@ def _handle_ping(event: Ping, proto: _ByteProtocol[_WSP]) -> None:
 @_handleEvent.register
 def _handle_pong(event: Pong, proto: _ByteProtocol[_WSP]) -> None:
     proto._wsp.pongReceived(event.payload)
+
+
+@_handleEvent.register
+def _handle_closeConnection(event: CloseConnection, proto: _ByteProtocol[_WSP]) -> None:
+    assert proto.transport is not None
+    if proto._wsconn.state != ConnectionState.CLOSED:
+        proto.transport.write(proto._wsconn.send(event.response()))
+    proto.transport.loseConnection()
 
 
 _log = Logger()

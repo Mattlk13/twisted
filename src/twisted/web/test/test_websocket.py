@@ -5,6 +5,7 @@ from typing import Any, Generic, TypeVar
 from unittest import skipIf
 
 from twisted.internet.defer import Deferred
+from twisted.internet.error import ConnectionDone
 from twisted.internet.protocol import Protocol, connectionDone
 from twisted.internet.testing import MemoryReactorClock
 from twisted.python.failure import Failure
@@ -278,8 +279,10 @@ class WebSocketTests(SynchronousTestCase):
         pump.flush()
         self.assertEqual(p.data, [b"hello", b"world"])
         req.finish()
-        pump.flush()
         self.assertIs(p.reason, None)
+        pump.flush()
+        assert p.reason is not None, "mainly for mypy"
+        self.assertEqual(p.reason.type, ConnectionDone)
 
 
 class MyProto(Protocol):
