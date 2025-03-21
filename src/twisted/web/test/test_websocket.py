@@ -140,7 +140,9 @@ class WebSocketFixture(Generic[WSP]):
         )
         self.resource.putChild(b"processing", WeirdResource())
         self.resource.putChild(b"slow", self.slowResource)
-        self.reactor.listenTCP(self.portNumber, Site(self.resource))
+        self.reactor.listenTCP(
+            self.portNumber, Site(self.resource, reactor=self.reactor)
+        )
         return self
 
     async def connect(self, uri: str = "http://localhost:80/connect") -> WSP:
