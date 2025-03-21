@@ -21,7 +21,6 @@ from wsproto.events import (
 from wsproto.handshake import H11Handshake
 from wsproto.utilities import RemoteProtocolError
 
-from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     IAddress,
     IProtocol,
@@ -58,9 +57,16 @@ class WebSocketTransport(TypingProtocol):
         Drop the websocket connection.
         """
 
-    def ping(self, payload: bytes = b"") -> Deferred[bytes]:
+    def ping(self, payload: bytes = b"") -> None:
         """
-        Send a 'ping' request to measure latency.
+        Send a websocket Ping request to measure latency.
+
+        @note: Per U{Mozilla's documentation
+            <https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#pings_and_pongs_the_heartbeat_of_websockets>},
+            multiple 'ping' requests may be coalesced into a single 'pong', and
+            unsolicited 'pong' requests must be ignored, so we do not return a
+            L{deferred <twisted.internet.defer.Deferred>} here; pongs are
+            delivered separately.
         """
 
 
@@ -232,7 +238,11 @@ class _ByteProtocol(Generic[_WSP]):
                 self.transport.write(self._wsconn.send(event.response()))
             elif isinstance(event, Pong):
                 self._wsp.pongReceived(event.payload)
-            else:
+
+            # This assert is here for ensuring version shear against wsproto is
+            # possible to debug, we expect it to be unreachable, so coverage is
+            # not measured.
+            else:  # pragma: no cover
                 assert False, f"unhandled message type: {event}"
 
     def connectionLost(self, reason: Failure) -> None:
