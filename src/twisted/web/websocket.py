@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import singledispatch
 from typing import Callable, Generic, Protocol as TypingProtocol, TypeVar, Union
 
 from zope.interface import implementer
@@ -13,6 +14,7 @@ from wsproto.events import (
     AcceptConnection,
     BytesMessage,
     CloseConnection,
+    Event,
     Ping,
     Pong,
     RejectConnection,
@@ -23,6 +25,7 @@ from wsproto.events import (
 from wsproto.handshake import H11Handshake
 from wsproto.utilities import RemoteProtocolError
 
+from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     IAddress,
     IProtocol,
@@ -33,7 +36,13 @@ from twisted.internet.interfaces import (
 from twisted.logger import Logger
 from twisted.python.failure import Failure
 from twisted.web._responses import BAD_REQUEST
-from twisted.web.client import URI, BrowserLikePolicyForHTTPS, _StandardEndpointFactory
+from twisted.web.client import (
+    URI,
+    BrowserLikePolicyForHTTPS,
+    Response,
+    _StandardEndpointFactory,
+)
+from twisted.web.http_headers import Headers
 from twisted.web.iweb import IAgentEndpointFactory, IPolicyForHTTPS
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Request
@@ -72,14 +81,30 @@ class WebSocketTransport(TypingProtocol):
         """
 
 
+@dataclass
+class ConnectionRejected(Exception):
+    """
+    A websocket connection was rejected by an HTTP response.
+    """
+
+    response: Response
+
+
 class WebSocketProtocol(TypingProtocol):
     """
     The receiver of websocket messages.
     """
 
-    def makeConnection(self, transport: WebSocketTransport) -> None:
+    def negotiationStarted(self, transport: WebSocketTransport) -> None:
         """
-        A connection was established.
+        An underlying transport (e.g.: a TCP connection) has been
+        established, but we have not yet begun our .
+        """
+
+    def negotiationFinished(self) -> None:
+        """
+        Negotiation is complete: a bidirectional websocket channel is fully
+        established.
         """
 
     def pongReceived(self, payload: bytes) -> None:
@@ -169,7 +194,7 @@ class WebSocketClientEndpoint:
         )
         d = endpoint.connect(_WebSocketClientProtocolFactory(self, protocolFactory))
         connected: _ByteProtocol[_WSP] = await d
-        return connected._wsp
+        return await connected._done
 
 
 @implementer(IProtocolFactory)
@@ -204,55 +229,98 @@ def _clientBoot(uri: str) -> _Bootstrap:
     return _
 
 
+@singledispatch
+def _handleEvent(event: Event, proto: _ByteProtocol[_WSP]) -> None:
+    """
+    Handle a websocket protocol event.
+    """
+
+
 @implementer(IProtocol)
 @dataclass
 class _ByteProtocol(Generic[_WSP]):
     _wsconn: WSConnection | Connection
     _bootstrap: _Bootstrap
     _wsp: _WSP
-
+    _done: Deferred[_WSP] = field(init=False)
     transport: ITransport = field(init=False)
+    _rejectResponse: Response | None = None
 
     def makeConnection(self, transport: ITransport) -> None:
         self.transport = transport
+        self._done = Deferred()
         self.connectionMade()
 
     def connectionMade(self) -> None:
         self._bootstrap(self._wsconn, self.transport)
-        self._wsp.makeConnection(_WebSocketTransportImpl(self))
+        self._wsp.negotiationStarted(_WebSocketTransportImpl(self))
 
     def dataReceived(self, data: bytes) -> None:
         self._wsconn.receive_data(data)
         for event in self._wsconn.events():
-            if isinstance(event, CloseConnection):
-                # TODO: close the connection
-                assert self.transport is not None
-                if self._wsconn.state != ConnectionState.CLOSED:
-                    self.transport.write(self._wsconn.send(event.response()))
-                self.transport.loseConnection()
-            elif isinstance(event, AcceptConnection):
-                ...  # TODO: handle connection acceptance step explicitly
-            elif isinstance(event, RejectConnection):
-                ...  # TODO: handle connection rejection
-            elif isinstance(event, RejectData):
-                ...  # TODO: handle connection rejection response payload data
-            elif isinstance(event, TextMessage):
-                self._wsp.textMessageReceived(event.data)
-            elif isinstance(event, BytesMessage):
-                self._wsp.bytesMessageReceived(event.data)
-            elif isinstance(event, Ping):
-                self.transport.write(self._wsconn.send(event.response()))
-            elif isinstance(event, Pong):
-                self._wsp.pongReceived(event.payload)
-
-            # This assert is here for ensuring version shear against wsproto is
-            # possible to debug, we expect it to be unreachable, so coverage is
-            # not measured.
-            else:  # pragma: no cover
-                assert False, f"unhandled message type: {event}"
+            _handleEvent(event, self)
 
     def connectionLost(self, reason: Failure) -> None:
         self._wsp.connectionLost(reason)
+        if self._rejectResponse is not None:
+            self._rejectResponse._bodyDataFinished(reason)
+            self._rejectResponse = None
+
+
+@_handleEvent.register
+def _handle_closeConnection(event: CloseConnection, proto: _ByteProtocol[_WSP]) -> None:
+    assert proto.transport is not None
+    if proto._wsconn.state != ConnectionState.CLOSED:
+        proto.transport.write(proto._wsconn.send(event.response()))
+    proto.transport.loseConnection()
+
+
+@_handleEvent.register
+def _handle_acceptConnection(
+    event: AcceptConnection, proto: _ByteProtocol[_WSP]
+) -> None:
+    done = proto._done
+    del proto._done
+    done.callback(proto._wsp)
+
+
+@_handleEvent.register
+def _handle_rejectConnection(
+    event: RejectConnection, proto: _ByteProtocol[_WSP]
+) -> None:
+    hdr = Headers()
+    for k, v in event.headers:
+        hdr.addRawHeader(k, v)
+    proto._rejectResponse = Response("1.1", event.status_code, "", hdr, proto.transport)
+    proto._done.errback(ConnectionRejected(proto._rejectResponse))
+
+
+@_handleEvent.register
+def _handle_rejectData(event: RejectData, proto: _ByteProtocol[_WSP]) -> None:
+    assert (
+        proto._rejectResponse is not None
+    ), "response should never be None when receiving RejectData"
+    proto._rejectResponse._bodyDataReceived(event.data)
+
+
+@_handleEvent.register
+def _handle_textMessage(event: TextMessage, proto: _ByteProtocol[_WSP]) -> None:
+    proto._wsp.textMessageReceived(event.data)
+
+
+@_handleEvent.register
+def _handle_bytesMessage(event: BytesMessage, proto: _ByteProtocol[_WSP]) -> None:
+    proto._wsp.bytesMessageReceived(event.data)
+
+
+@_handleEvent.register
+def _handle_ping(event: Ping, proto: _ByteProtocol[_WSP]) -> None:
+    proto.transport.write(proto._wsconn.send(event.response()))
+
+
+@_handleEvent.register
+def _handle_pong(event: Pong, proto: _ByteProtocol[_WSP]) -> None:
+    proto._wsp.pongReceived(event.payload)
 
 
 _log = Logger()

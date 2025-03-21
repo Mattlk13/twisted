@@ -5,6 +5,7 @@ from typing import Any, Generic, TypeVar
 from unittest import skipIf
 
 from twisted.internet.defer import Deferred
+from twisted.internet.protocol import Protocol, connectionDone
 from twisted.internet.testing import MemoryReactorClock
 from twisted.python.failure import Failure
 from twisted.test.iosim import ConnectionCompleter, IOPump
@@ -13,10 +14,36 @@ from twisted.web._responses import BAD_REQUEST
 from twisted.web.client import Agent, readBody
 from twisted.web.iweb import IRequest
 from twisted.web.resource import Resource
-from twisted.web.server import Site
+from twisted.web.server import NOT_DONE_YET, Request, Site
+from twisted.web.static import Data
+from twisted.web.websocket import ConnectionRejected
 
 WSP = TypeVar("WSP", bound="WebSocketProtocol")
 shouldSkip = False
+
+
+class WeirdResource(Resource):
+    def render_GET(self, request: Request) -> bytes:
+        """
+        Per U{the wsproto documentation
+        <https://python-hyper.org/projects/wsproto/en/latest/api.html#wsproto.events.RejectConnection.has_body>}:
+
+            - The only scenario in which the caller receives a RejectConnection
+              with C{has_body == False} is if the peer violates sends an
+              informational status code (1xx) other than 101
+
+        This is a weird edge case so we provoke it.
+        """
+        request.setResponseCode(102)
+        return b""
+
+
+class SlowResource(Resource):
+    def render_GET(self, request: Request) -> int:
+        self.request = request
+        return NOT_DONE_YET
+
+
 try:
     __import__("wsproto")
 except ImportError:
@@ -36,8 +63,11 @@ else:
         pongs: list[bytes] = field(default_factory=list)
         wasLost: Failure | None = None
 
-        def makeConnection(self, transport: WebSocketTransport) -> None:
+        def negotiationStarted(self, transport: WebSocketTransport) -> None:
             self.transport = transport
+
+        def negotiationFinished(self) -> None:
+            ...
 
         def connectionLost(self, reason: Failure) -> None:
             self.wasLost = reason
@@ -96,6 +126,7 @@ class WebSocketFixture(Generic[WSP]):
     resource: Resource = field(default_factory=Resource)
     portNumber: int = 80
     servers: list[WSP] = field(default_factory=list)
+    slowResource: SlowResource = field(default_factory=SlowResource)
 
     @classmethod
     def new(
@@ -105,21 +136,24 @@ class WebSocketFixture(Generic[WSP]):
         serverFactory = MyFactory()
         serverFactory.fixture = self
         self.resource.putChild(b"connect", WebSocketResource(serverFactory))
+        self.resource.putChild(
+            b"resource", Data(b"some-data", "application/octet-stream")
+        )
+        self.resource.putChild(b"processing", WeirdResource())
+        self.resource.putChild(b"slow", self.slowResource)
         self.reactor.listenTCP(self.portNumber, Site(self.resource))
         return self
 
-    async def connect(self) -> WSP:
-        client = WebSocketClientEndpoint.new(
-            self.reactor, "http://localhost:80/connect"
-        )
+    async def connect(self, uri: str = "http://localhost:80/connect") -> WSP:
+        client = WebSocketClientEndpoint.new(self.reactor, uri)
         return await client.connect(self.clientFactory)
 
-    def complete(self) -> IOPump:
+    def complete(self, greet: bool = True) -> IOPump:
         """
         There should be a single connection in progress; complete it.
         """
         completer = ConnectionCompleter(self.reactor)
-        succeeded = completer.succeedOnce()
+        succeeded = completer.succeedOnce(greet=greet)
         assert succeeded is not None, "Connection not in progress."
         return succeeded
 
@@ -195,3 +229,68 @@ class WebSocketTests(SynchronousTestCase):
         self.assertEqual(
             self.successResultOf(body), b"websocket protocol negotiation error"
         )
+
+    def test_connectionRefused(self) -> None:
+        """
+        Attempting to connect to a regular HTTP resource that does not support
+        websockets will result in the Deferred returned from
+        L{WebSocketClientEndpoint} failing.
+        """
+        fixture = WebSocketFixture.new(MyClientFactory())
+        connected = Deferred.fromCoroutine(fixture.connect("http://localhost/empty"))
+        pump = fixture.complete(greet=False)
+        self.assertNoResult(connected)
+        pump.flush()
+        self.failureResultOf(connected, ConnectionRejected)
+
+    def test_connectionRefusedWeird(self) -> None:
+        """
+        Attempting to connect to a regular HTTP resource that does not support
+        websockets will result in the Deferred returned from
+        L{WebSocketClientEndpoint} failing.
+        """
+        fixture = WebSocketFixture.new(MyClientFactory())
+        connected = Deferred.fromCoroutine(
+            fixture.connect("http://localhost/processing")
+        )
+        pump = fixture.complete(greet=False)
+        self.assertNoResult(connected)
+        pump.flush()
+        self.failureResultOf(connected, ConnectionRejected)
+
+    def test_connectionRefusedSlow(self) -> None:
+        fixture = WebSocketFixture.new(MyClientFactory())
+        connected = Deferred.fromCoroutine(fixture.connect("http://localhost/slow"))
+        pump = fixture.complete(greet=True)
+        self.assertNoResult(connected)
+        fixture.slowResource.request.write(b"")
+        pump.flush()
+
+        rejected = self.failureResultOf(connected, ConnectionRejected)
+        resp = rejected.value.response
+        resp.deliverBody(p := MyProto())
+        self.assertEqual(p.data, [])
+        req = fixture.slowResource.request
+        req.write(b"hello")
+        pump.flush()
+        self.assertEqual(p.data, [b"hello"])
+        req.write(b"world")
+        pump.flush()
+        self.assertEqual(p.data, [b"hello", b"world"])
+        req.finish()
+        pump.flush()
+        self.assertIs(p.reason, None)
+
+
+class MyProto(Protocol):
+    reason: Failure | None = None
+    data: list[bytes]
+
+    def connectionMade(self) -> None:
+        self.data = []
+
+    def dataReceived(self, data: bytes) -> None:
+        self.data.append(data)
+
+    def connectionLost(self, reason: Failure = connectionDone) -> None:
+        self.reason = reason
