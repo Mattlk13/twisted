@@ -12,6 +12,7 @@ import socket
 from functools import partial, reduce
 from io import BytesIO
 from struct import pack
+from typing import AnyStr
 
 from twisted.internet import defer, error, reactor
 from twisted.internet.defer import succeed
@@ -21,6 +22,7 @@ from twisted.internet.testing import (
     waitUntilAllDisconnected,
 )
 from twisted.names import authority, client, common, dns, server
+from twisted.names.authority import BindAuthority
 from twisted.names.client import Resolver
 from twisted.names.dns import SOA, Message, Query, Record_A, Record_SOA, RRHeader
 from twisted.names.error import DomainError
@@ -1211,7 +1213,7 @@ class BindAuthorityTests(unittest.TestCase):
     Tests for L{twisted.names.authority.BindAuthority}.
     """
 
-    def loadBindString(self, s):
+    def loadBindString(self, s: bytes, path: AnyStr) -> authority.BindAuthority:
         """
         Create a new L{twisted.names.authority.BindAuthority} from C{s}.
 
@@ -1221,13 +1223,50 @@ class BindAuthorityTests(unittest.TestCase):
         @return: a new bind authority
         @rtype: L{twisted.names.authority.BindAuthority}
         """
-        fp = FilePath(self.mktemp().encode("ascii"))
+        fp: FilePath[AnyStr] = FilePath(path)
         fp.setContent(s)
 
         return authority.BindAuthority(fp.path)
 
     def setUp(self):
-        self.auth = self.loadBindString(sampleBindZone)
+        path = self.mktemp().encode("ascii")
+        self.auth = self.loadBindString(sampleBindZone, path)
+
+    def test_loadBindZonePathAsString(self):
+        """
+        L{BindAuthority} loads a BIND zone with filepath as type string.
+        """
+        path = self.mktemp()
+        authority = self.loadBindString(sampleBindZone, path)
+
+        self.assertIsInstance(
+            authority, BindAuthority, "Loaded object is not a BindAuthority"
+        )
+
+        self.assertTrue(authority.records, "No records were loaded from the BIND zone")
+
+        self.assertIsInstance(authority.records, dict, "Records is not a dictionary")
+        self.assertGreater(
+            len(authority.records), 0, "No domains were parsed into records"
+        )
+
+    def test_loadBindZonePathAsBytes(self):
+        """
+        L{BindAuthority} loads a BIND zone with filepath as type bytes.
+        """
+        path = self.mktemp().encode("ascii")
+        authority = self.loadBindString(sampleBindZone, path)
+
+        self.assertIsInstance(
+            authority, BindAuthority, "Loaded object is not a BindAuthority"
+        )
+
+        self.assertTrue(authority.records, "No records were loaded from the BIND zone")
+
+        self.assertIsInstance(authority.records, dict, "Records is not a dictionary")
+        self.assertGreater(
+            len(authority.records), 0, "No domains were parsed into records"
+        )
 
     def test_ttl(self):
         """
@@ -1318,17 +1357,19 @@ class BindAuthorityTests(unittest.TestCase):
         """
         loadBindString raises NotImplementedError on invalid records.
         """
+        path = self.mktemp().encode("ascii")
         with self.assertRaises(NotImplementedError) as e:
-            self.loadBindString(b"example.com. IN LOL 192.168.0.1")
+            self.loadBindString(b"example.com. IN LOL 192.168.0.1", path)
         self.assertEqual("Record type 'LOL' not supported", e.exception.args[0])
 
     def test_invalidDirectives(self):
         """
         $INCLUDE and $GENERATE raise NotImplementedError.
         """
+        path = self.mktemp().encode("ascii")
         for directive in (b"$INCLUDE", b"$GENERATE"):
             with self.assertRaises(NotImplementedError) as e:
-                self.loadBindString(directive + b" doesNotMatter")
+                self.loadBindString(directive + b" doesNotMatter", path)
             self.assertEqual(
                 nativeString(directive + b" directive not implemented"),
                 e.exception.args[0],
