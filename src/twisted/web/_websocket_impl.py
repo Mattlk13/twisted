@@ -26,7 +26,13 @@ from wsproto.handshake import H11Handshake
 from wsproto.utilities import RemoteProtocolError
 
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IProtocol, IReactorTCP, ITransport
+from twisted.internet.interfaces import (
+    IConsumer,
+    IProtocol,
+    IPushProducer,
+    IReactorTCP,
+    ITransport,
+)
 from twisted.internet.protocol import Factory as ProtocolFactory
 from twisted.logger import Logger
 from twisted.python.failure import Failure
@@ -73,6 +79,16 @@ class WebSocketTransport(TypingProtocol):
             unsolicited 'pong' requests must be ignored, so we do not return a
             L{deferred <twisted.internet.defer.Deferred>} here; pongs are
             delivered separately.
+        """
+
+    def attachProducer(self, producer: IPushProducer) -> None:
+        """
+        Attach the given L{IPushProducer} to this transport.
+        """
+
+    def detachProducer(self) -> None:
+        """
+        Detach a previously attached L{IPushProducer} from this transport.
         """
 
 
@@ -310,6 +326,12 @@ class _WebSocketWireProtocol(Generic[_WSP]):
         assert t is not None
         t.write(self._wsconn.send(CloseConnection(code, reason)))
         t.loseConnection()
+
+    def attachProducer(self, producer: IPushProducer) -> None:
+        IConsumer(self.transport).registerProducer(producer, True)
+
+    def detachProducer(self) -> None:
+        IConsumer(self.transport).unregisterProducer()
 
     def _completeConnection(self) -> None:
         done = self._done
