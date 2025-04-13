@@ -4,8 +4,11 @@ from dataclasses import dataclass, field
 from typing import Any, Generic, TypeVar
 from unittest import skipIf
 
+from zope.interface import implementer
+
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionDone
+from twisted.internet.interfaces import IPushProducer
 from twisted.internet.protocol import Protocol, connectionDone
 from twisted.internet.testing import MemoryReactorClock
 from twisted.python.failure import Failure
@@ -180,6 +183,10 @@ class WebSocketTests(SynchronousTestCase):
         self.assertEqual(self.successResultOf(requested), "response")
 
     def test_bytesMessage(self) -> None:
+        """
+        Connecting to a websocket server and sending it a bytes message results
+        in C{bytesMessageReceived} being called.
+        """
         fixture = WebSocketFixture.new(MyClientFactory())
         connected = Deferred.fromCoroutine(fixture.connect())
         pump = fixture.complete()
@@ -188,6 +195,40 @@ class WebSocketTests(SynchronousTestCase):
         self.assertNoResult(bRequested)
         pump.flush()
         self.assertEqual(self.successResultOf(bRequested), b"\x00resp\x01onse\xff")
+
+    def test_backpressure(self) -> None:
+        """
+        Websocket transports can notify a producer of backpressure events via
+        attachProducer.
+        """
+        fixture = WebSocketFixture.new(MyClientFactory())
+        Deferred.fromCoroutine(fixture.connect())
+        pump = fixture.complete()
+        events = []
+
+        @implementer(IPushProducer)
+        class TestProducer:
+            def pauseProducing(self) -> None:
+                events.append("paused")
+
+            def resumeProducing(self) -> None:
+                events.append("resumed")
+
+            def stopProducing(self) -> None:
+                events.append("stopped")
+
+        testProducer = TestProducer()
+        fixture.servers[0].transport.attachProducer(testProducer)
+        self.assertEqual(events, [])
+        pump.serverIO.producer.pauseProducing()
+        self.assertEqual(events, ["paused"])
+        pump.serverIO.producer.resumeProducing()
+        self.assertEqual(events, ["paused", "resumed"])
+        pump.serverIO.producer.stopProducing()
+        self.assertEqual(events, ["paused", "resumed", "stopped"])
+        self.assertIs(pump.serverIO.producer, testProducer)
+        fixture.servers[0].transport.detachProducer()
+        self.assertIs(pump.serverIO.producer, None)
 
     def test_pingPong(self) -> None:
         fixture = WebSocketFixture.new(MyClientFactory())
