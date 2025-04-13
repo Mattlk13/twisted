@@ -1034,9 +1034,9 @@ class _StandardEndpointFactory:
             )
 
         endpoint = HostnameEndpoint(self._reactor, host, uri.port, **kwargs)
-        if uri.scheme == b"http":
+        if uri.scheme in {b"http", b"ws"}:
             return endpoint
-        elif uri.scheme == b"https":
+        elif uri.scheme in {b"https", b"wss"}:
             connectionCreator = self._policyForHTTPS.creatorForNetloc(
                 uri.host, uri.port
             )
