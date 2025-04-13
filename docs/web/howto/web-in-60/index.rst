@@ -53,3 +53,4 @@ For subjects not covered here, see the :doc:`Twisted Web tutorial <../using-twis
 #. :doc:`Session basics <session-basics>`
 #. :doc:`Storing objects in the session <session-store>`
 #. :doc:`Session endings <session-endings>`
+#. :doc:`WebSockets <websockets>`
