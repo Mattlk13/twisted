@@ -6,6 +6,9 @@ For websocket servers, place a L{WebSocketResource} into your Twisted Web
 resource hierarchy.
 
 For websocket clients, call L{WebSocketClientEndpoint.connect}.
+
+@note: To use this module, you must install Twisted's C{websocket} extra, i.e.
+    C{pip install twisted[websocket]}.
 """
 
 from ._websocket_impl import (
