@@ -11,20 +11,20 @@ For the purposes of our example here, you will need to have some familiarity wit
 
 .. note::
 
-   In order to use the websocket support in Twisted, you will need the ``websocket`` optional dependency, so install Twisted with either ``pip install twisted[websocket]`` or install one that includes it, such as ``twisted[all_non_platform]`` or ``twisted[all]`` .
+   In order to use the websocket support in Twisted, you will need the ``websocket`` optional dependency, so :doc:`install Twisted </installation>` with either ``pip install twisted[websocket]`` or install one that includes it, such as ``twisted[all_non_platform]`` or ``twisted[all]`` .
 
 WebSocket Server
 ----------------
 
 Let's build a demo of a simple websocket server communicating with a web browser.
 To begin with, we will need a folder with 3 files in it.
-First, let's do the Twisted part.  We need a :py:cls:`twisted.web.websocket.WebSocketResource` to be served at a known URL, so let's put one into a ``.rpy`` file called ``webskt.rpy`` :
+First, let's do the Twisted part.  We need a :py:class:`twisted.web.websocket.WebSocketResource` to be served at a known URL, so let's put one into a ``.rpy`` file called ``webskt.rpy`` :
 
 :download:`webskt.rpy <../../examples/websocket/webskt.rpy>`
 
 .. literalinclude:: ../../examples/websocket/webskt.rpy
 
-Note that ``WebSocketEchoFactory`` complies with the :py:cls:`twisted.web.websocket.WebSocketServerFactory` :py:cls:`protocol <typing.Protocol>`, returning a ``WebSocketDemo`` that complies with :py:cls:`twisted.web.websocket.WebSocketProtocol` .
+Note that ``WebSocketEchoFactory`` complies with the :py:class:`twisted.web.websocket.WebSocketServerFactory` :py:class:`protocol <typing.Protocol>`, returning a ``WebSocketDemo`` that complies with :py:class:`twisted.web.websocket.WebSocketProtocol` .
 We implement ``negotiationFinished``, the method called once the websocket connection is fully set up, to begin sending a text message to our peer once per second.
 
 Then, we will need an index page for our live websocket site, with a button on it that hooks up a JavaScript function to connect to ``/webskt.rpy``:
@@ -57,13 +57,13 @@ Click the button, and you should see the web page populate with text like this:
 
 And that's all you need to implement a websocket server with Twisted!
 
-Since :py:cls:`twisted.web.websocket.WebSocketResource` is a standard Twisted :py:cls:`resource <twisted.web.server.Resource>`, you can integrate it with things like :doc:`authentication <http-auth>` or :doc:`sessions <session-basics>`, just as you would any other resource.
+Since :py:class:`twisted.web.websocket.WebSocketResource` is a standard Twisted :py:class:`resource <twisted.web.server.Resource>`, you can integrate it with things like :doc:`authentication <http-auth>` or :doc:`sessions <session-basics>`, just as you would any other resource.
 
 WebSocket Client
 ----------------
 
 Of course, if we have a server, we may also want to talk to it from Python.
-To do that, let's build a simple websocket client, with :py:cls:`twisted.web.websocket.WebSocketClientEndpoint`.
+To do that, let's build a simple websocket client, with :py:class:`twisted.web.websocket.WebSocketClientEndpoint`.
 It looks much the same as the server, but, we will just print out each data message we receive.
 
 :download:`script.js <../../examples/websocket/websocket-client.py>`
