@@ -41,6 +41,7 @@ The following optional dependencies are supported:
 * **dev** - packages that aid in the development and testing of Twisted itself.
 * **tls** - packages that are needed to work with TLS.
 * **http2** - packages needed for http2 support.
+* **websocket** - packages needed for websocket protocol support.
 * **conch** - packages for working with conch/SSH.
 * **serial** - package to work with serial data.
 * **all-non-platform** - installs **tls**, **conch**, and **serial** options.

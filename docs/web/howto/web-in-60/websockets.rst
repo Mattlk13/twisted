@@ -9,6 +9,10 @@ Twisted Web provides support for the WebSocket protocol for clients (such as web
 
 For the purposes of our example here, you will need to have some familiarity with the concepts covered in :doc:`serving static content <static-content>` and :doc:`rpy scripts <rpy-scripts>`, because we will be using those to construct our resource hierarchy.
 
+.. note::
+
+   In order to use the websocket support in Twisted, you will need the ``websocket`` optional dependency, so install Twisted with either ``pip install twisted[websocket]`` or install one that includes it, such as ``twisted[all_non_platform]`` or ``twisted[all]`` .
+
 WebSocket Server
 ----------------
 
