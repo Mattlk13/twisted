@@ -83,6 +83,9 @@ class ConnectionRejected(Exception):
     """
 
     response: Response
+    """
+    The HTTP response that describes the rejection.
+    """
 
 
 class WebSocketProtocol(TypingProtocol):
