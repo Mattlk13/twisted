@@ -260,6 +260,10 @@ class WebSocketTests(SynchronousTestCase):
         self.failureResultOf(connected, ConnectionRejected)
 
     def test_connectionRefusedSlow(self) -> None:
+        """
+        When the client connection is refused by an asynchronous HTTP response,
+        the websocket client will not be notified until the response arrives.
+        """
         fixture = WebSocketFixture.new(MyClientFactory())
         connected = Deferred.fromCoroutine(fixture.connect("http://localhost/slow"))
         pump = fixture.complete(greet=True)
