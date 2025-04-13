@@ -26,13 +26,8 @@ from wsproto.handshake import H11Handshake
 from wsproto.utilities import RemoteProtocolError
 
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import (
-    IAddress,
-    IProtocol,
-    IProtocolFactory,
-    IReactorTCP,
-    ITransport,
-)
+from twisted.internet.interfaces import IProtocol, IReactorTCP, ITransport
+from twisted.internet.protocol import Factory as ProtocolFactory
 from twisted.logger import Logger
 from twisted.python.failure import Failure
 from twisted.web._responses import BAD_REQUEST
@@ -98,13 +93,13 @@ class WebSocketProtocol(TypingProtocol):
 
     def negotiationStarted(self, transport: WebSocketTransport) -> None:
         """
-        An underlying transport (e.g.: a TCP connection) has been
-        established, but we have not yet begun our .
+        An underlying transport (e.g.: a TCP connection) has been established;
+        negotiation of the websocket transport has begun.
         """
 
     def negotiationFinished(self) -> None:
         """
-        Negotiation is complete: a bidirectional websocket channel is fully
+        Negotiation is complete: a bidirectional websocket channel is now fully
         established.
         """
 
@@ -120,7 +115,7 @@ class WebSocketProtocol(TypingProtocol):
 
     def bytesMessageReceived(self, data: bytes) -> None:
         """
-        A bytes message was received.
+        A bytes message was received from the peer.
         """
 
     def connectionLost(self, reason: Failure) -> None:
@@ -135,70 +130,118 @@ _log = Logger()
 
 
 class WebSocketServerFactory(TypingProtocol[_WSP]):
+    """
+    A L{WebSocketServerFactory} is a factory for a particular kind of
+    L{WebSocketProtocol} that implements server-side websocket listeners via
+    L{WebSocketResource}.
+    """
+
     def buildProtocol(self, request: Request) -> _WSP:
-        ...
+        """
+        To conform to L{WebSocketServerFactory}, you must implement a
+        C{buildProtocol} method which takes a L{Request
+        <twisted.web.server.Request>} and returns a L{WebSocketProtocol}.
+
+        @return: a L{WebSocketProtocol} that will handle the inbound
+            connection.
+        """
 
 
 class WebSocketClientFactory(TypingProtocol[_WSP]):
-    def buildProtocol(self, uri: str) -> _WSP:
-        ...
+    """
+    A L{WebSocketClientFactory} is a factory for a particular kind of
+    L{WebSocketProtocol} that implements client-side websocket listeners via
+    L{WebSocketClientEndpoint}.
+    """
+
+    def buildProtocol(self, url: str) -> _WSP:
+        """
+        To conform to L{WebSocketServerFactory}, you must implement a
+        C{buildProtocol} method which takes a string representing an URL and
+        returns a L{WebSocketProtocol}.
+
+        @return: a L{WebSocketProtocol} that will handle the outgoing
+            connection.
+        """
 
 
-@dataclass
+@dataclass(frozen=True)
 class WebSocketClientEndpoint:
+    """
+    A L{WebSocketClientEndpoint} describes an URL to connect to and a way of
+    connecting to that URL, that can connect a L{WebSocketClientFactory} to
+    that URL.
+    """
+
     endpointFactory: IAgentEndpointFactory
-    uri: str
+    """
+    an L{IAgentEndpointFactory} that constructs agent endpoints when L{connect
+    <WebSocketClientEndpoint.connect>}
+    """
+    url: str
+    """
+    the URL to connect to.
+    """
 
     @classmethod
     def new(
         cls,
         reactor: IReactorTCP,
-        uri: str,
-        contextFactory: IPolicyForHTTPS = BrowserLikePolicyForHTTPS(),
+        url: str,
+        tlsPolicy: IPolicyForHTTPS = BrowserLikePolicyForHTTPS(),
         connectTimeout: int | None = None,
         bindAddress: bytes | None = None,
     ) -> WebSocketClientEndpoint:
-        sef = _StandardEndpointFactory(
-            reactor, contextFactory, connectTimeout, bindAddress
-        )
-        return WebSocketClientEndpoint(sef, uri)
+        """
+        Construct a L{WebSocketClientEndpoint} from a reactor and a URL.
+
+        @param reactor: The reactor to use for the TCP connection.
+
+        @param url: a string describing an URL where a websocket server lives.
+
+        @param tlsPolicy: The TLS policy to use for HTTPS connections.
+
+        @param connectTimeout: The number of seconds for the TCP-level
+            connection timeout.
+
+        @param bindAddress: The bind address to use for the TCP client
+            connections.
+
+        @return: the newly constructed endpoint.
+        """
+        sef = _StandardEndpointFactory(reactor, tlsPolicy, connectTimeout, bindAddress)
+        return WebSocketClientEndpoint(sef, url)
 
     async def connect(self, protocolFactory: WebSocketClientFactory[_WSP]) -> _WSP:
+        """
+        Make an outgoing connection to this L{WebSocketClientEndpoint}'s HTTPS
+        connection.
+
+        @param protocolFactory: The constructor for the protocol.
+
+        @return: A coroutine (that yields L{Deferred}s) that completes with the
+            connected L{WebSocketProtocol} once the websocket connection is
+            established.
+        """
         endpoint = self.endpointFactory.endpointForURI(
-            URI.fromBytes(self.uri.encode("utf-8"))
+            URI.fromBytes(self.url.encode("utf-8"))
         )
-        d = endpoint.connect(_WebSocketClientFactory(self, protocolFactory))
-        connected: _WebSocketWireProtocol[_WSP] = await d
+
+        def clientBootstrap(wsc: WSConnection | Connection, t: ITransport) -> None:
+            h = URL.fromText(self.url)
+            target = str(h.replace(scheme="", host="", port=None))
+            t.write(wsc.send(WSRequest(h.host, target)))
+
+        connected: _WebSocketWireProtocol[_WSP] = await endpoint.connect(
+            ProtocolFactory.forProtocol(
+                lambda: _WebSocketWireProtocol(
+                    WSConnection(ConnectionType.CLIENT),
+                    clientBootstrap,
+                    protocolFactory.buildProtocol(self.url),
+                )
+            )
+        )
         return await connected._done
-
-
-@implementer(IProtocolFactory)
-@dataclass
-class _WebSocketClientFactory(Generic[_WSP]):
-    endpoint: WebSocketClientEndpoint
-    webSocketProtocolFactory: WebSocketClientFactory[_WSP]
-
-    def doStart(self) -> None:
-        ...
-
-    def doStop(self) -> None:
-        ...
-
-    def buildProtocol(self, addr: IAddress) -> _WebSocketWireProtocol[_WSP]:
-        return _WebSocketWireProtocol(
-            WSConnection(ConnectionType.CLIENT),
-            _clientBoot(self.endpoint.uri),
-            self.webSocketProtocolFactory.buildProtocol(self.endpoint.uri),
-        )
-
-
-def _clientBoot(uri: str) -> _Bootstrap:
-    def _(wsc: WSConnection | Connection, t: ITransport) -> None:
-        h = URL.fromText(uri)
-        target = str(h.replace(scheme="", host="", port=None))
-        t.write(wsc.send(WSRequest(h.host, target)))
-
-    return _
 
 
 @singledispatch
@@ -330,11 +373,27 @@ def _negotiationError(request: Request) -> bytes:
 
 
 class WebSocketResource(Resource):
+    """
+    A L{WebSocketResource} is a L{Resource} that presents a websocket listener.
+    You can install it into any twisted web server resource hierarchy.
+    """
+
     def __init__(self, factory: WebSocketServerFactory[WebSocketProtocol]) -> None:
+        """
+        Create a L{WebSocketResource} that will respond to incoming connections
+        with the given L{WebSocketServerFactory}.
+
+        @param factory: The factory that will be used to respond to inbound
+            websocket connections on appropriately formatted GET requests.
+        """
         super().__init__()
         self.factory = factory
 
     def render_GET(self, request: Request) -> bytes | int:
+        """
+        This implementation of the C{GET} HTTP method will respond to inbound
+        websocket connections.
+        """
         handshake = H11Handshake(ConnectionType.SERVER)
         raw = request.requestHeaders.getAllRawHeaders()
         simpleHeaders = [(hkey, val) for hkey, hvals in raw for val in hvals]
