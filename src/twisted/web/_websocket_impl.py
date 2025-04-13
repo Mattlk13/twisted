@@ -80,12 +80,11 @@ class WebSocketTransport(TypingProtocol):
 class ConnectionRejected(Exception):
     """
     A websocket connection was rejected by an HTTP response.
+
+    @ivar response: The HTTP response that describes the rejection.
     """
 
     response: Response
-    """
-    The HTTP response that describes the rejection.
-    """
 
 
 class WebSocketProtocol(TypingProtocol):
