@@ -4,15 +4,27 @@ from twisted.web.resource import Resource
 from twisted.web.static import File
 from twisted.web.websocket import (
     WebSocketProtocol,
-    WebSocketServerProtocolFactory,
+    WebSocketServerFactory,
     WebSocketResource,
     WebSocketTransport,
 )
+from twisted.internet.task import LoopingCall
 
 
 class WebSocketEcho(WebSocketProtocol):
-    def makeConnection(self, transport: WebSocketTransport) -> None:
+    loop: LoopingCall | None = None
+
+    def negotiationStarted(self, transport: WebSocketTransport) -> None:
         self.transport = transport
+        self.counter = 0
+
+    def negotiationFinished(self) -> None:
+        def heartbeat() -> None:
+            self.counter += 1
+            self.transport.sendTextMessage(f"heartbeat {self.counter}")
+
+        self.loop = LoopingCall(heartbeat)
+        self.loop.start(1.0)
 
     def bytesMessageReceived(self, data: bytes) -> None:
         pass
@@ -21,13 +33,16 @@ class WebSocketEcho(WebSocketProtocol):
         self.transport.sendTextMessage(f"reply to {data}")
 
     def connectionLost(self, reason: Failure) -> None:
+        if self.loop is not None:
+            self.loop.stop()
+
+    def pongReceived(self, payload: bytes) -> None:
         pass
 
-class WebSocketEchoFactory(WebSocketServerProtocolFactory[WebSocketEcho]):
+
+class WebSocketEchoFactory(WebSocketServerFactory[WebSocketEcho]):
     def buildProtocol(self, request: IRequest) -> WebSocketEcho:
         return WebSocketEcho()
 
-resource = Resource()
-resource.putChild(b"webskt", WebSocketResource(WebSocketEchoFactory()))
-resource.putChild(b"", File("index.html"))
-resource.putChild(b"script.js", File("script.js", "text/plain; charset=utf-8"))
+
+resource = WebSocketResource(WebSocketEchoFactory())

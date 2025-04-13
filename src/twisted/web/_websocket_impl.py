@@ -272,8 +272,9 @@ class _WebSocketWireProtocol(Generic[_WSP]):
         self.connectionMade()
 
     def connectionMade(self) -> None:
-        self._bootstrap(self._wsconn, self.transport)
+        # TODO: write during negotiationStarted breaks the connection?
         self._wsp.negotiationStarted(self)
+        self._bootstrap(self._wsconn, self.transport)
 
     def dataReceived(self, data: bytes) -> None:
         self._wsconn.receive_data(data)
@@ -308,15 +309,25 @@ class _WebSocketWireProtocol(Generic[_WSP]):
         t.write(self._wsconn.send(CloseConnection(code, reason)))
         t.loseConnection()
 
+    def _completeConnection(self) -> None:
+        done = self._done
+        del self._done
+        done.callback(self._wsp)
+        self._wsp.negotiationFinished()
+
+    def _rejectConnection(self) -> None:
+        assert self._rejectResponse is not None
+        done = self._done
+        del self._done
+        done.errback(ConnectionRejected(self._rejectResponse))
+
 
 AnyWSWP = _WebSocketWireProtocol[WebSocketProtocol]
 
 
 @_handleEvent.register
 def _handle_acceptConnection(event: AcceptConnection, proto: AnyWSWP) -> None:
-    done = proto._done
-    del proto._done
-    done.callback(proto._wsp)
+    proto._completeConnection()
 
 
 @_handleEvent.register
@@ -325,7 +336,7 @@ def _handle_rejectConnection(event: RejectConnection, proto: AnyWSWP) -> None:
     for k, v in event.headers:
         hdr.addRawHeader(k, v)
     proto._rejectResponse = Response("1.1", event.status_code, "", hdr, proto.transport)
-    proto._done.errback(ConnectionRejected(proto._rejectResponse))
+    proto._rejectConnection()
 
 
 @_handleEvent.register
@@ -409,8 +420,14 @@ class WebSocketResource(Resource):
         t = request.channel.transport
         assert t is not None, "channel transport not connected"
         assert wscon is not None, "connection not accepted by wsproto"
-        request.channel.upgradeToProtocol(
-            _WebSocketWireProtocol(wscon, lambda ign, ign2: None, wsprot)
-        )
+        wireProto = _WebSocketWireProtocol(wscon, serverBootstrap, wsprot)
+        request.channel.upgradeToProtocol(wireProto)
         t.write(toSend)
+        wsprot.negotiationFinished()
         return NOT_DONE_YET
+
+
+def serverBootstrap(wsc: WSConnection | Connection, t: ITransport) -> None:
+    """
+    The server requires no bootstrapping, so this is a no-op.
+    """
