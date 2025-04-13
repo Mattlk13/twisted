@@ -2,16 +2,11 @@ from twisted.python.failure import Failure
 from twisted.web.iweb import IRequest
 from twisted.web.resource import Resource
 from twisted.web.static import File
-from twisted.web.websocket import (
-    WebSocketProtocol,
-    WebSocketServerFactory,
-    WebSocketResource,
-    WebSocketTransport,
-)
+from twisted.web.websocket import WebSocketResource, WebSocketTransport
 from twisted.internet.task import LoopingCall
 
 
-class WebSocketEcho(WebSocketProtocol):
+class WebSocketDemo:
     loop: LoopingCall | None = None
 
     def negotiationStarted(self, transport: WebSocketTransport) -> None:
@@ -40,9 +35,9 @@ class WebSocketEcho(WebSocketProtocol):
         pass
 
 
-class WebSocketEchoFactory(WebSocketServerFactory[WebSocketEcho]):
-    def buildProtocol(self, request: IRequest) -> WebSocketEcho:
-        return WebSocketEcho()
+class WebSocketEchoFactory:
+    def buildProtocol(self, request: IRequest) -> WebSocketDemo:
+        return WebSocketDemo()
 
 
 resource = WebSocketResource(WebSocketEchoFactory())
