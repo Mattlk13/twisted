@@ -1,3 +1,5 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 # -*- test-case-name: twisted.web.test.test_websocket -*-
 """
 Websocket (rfc6455) client and server support.
