@@ -6,7 +6,7 @@ function recordEvent(evtType, evt) {
 }
 
 function doConnect() {
- webSocket = new WebSocket("ws://localhost:8080/webskt.rpy");
+ webSocket = new WebSocket("ws://localhost:8080/websocket-server.rpy");
  webSocket.onopen = (event) => {
   console.log("opened");
   webSocket.send("hello world");

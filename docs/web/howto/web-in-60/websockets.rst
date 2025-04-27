@@ -18,23 +18,23 @@ WebSocket Server
 
 Let's build a demo of a simple websocket server communicating with a web browser.
 To begin with, we will need a folder with 3 files in it.
-First, let's do the Twisted part.  We need a :py:class:`twisted.web.websocket.WebSocketResource` to be served at a known URL, so let's put one into a ``.rpy`` file called ``webskt.rpy`` :
+First, let's do the Twisted part.  We need a :py:class:`twisted.web.websocket.WebSocketResource` to be served at a known URL, so let's put one into a ``.rpy`` file called ``websocket-server.rpy`` :
 
-:download:`webskt.rpy <../../examples/websocket/webskt.rpy>`
+:download:`websocket-server.rpy <../../examples/websocket/websocket-server.rpy>`
 
-.. literalinclude:: ../../examples/websocket/webskt.rpy
+.. literalinclude:: ../../examples/websocket/websocket-server.rpy
 
 Note that ``WebSocketEchoFactory`` complies with the :py:class:`twisted.web.websocket.WebSocketServerFactory` :py:class:`protocol <typing.Protocol>`, returning a ``WebSocketDemo`` that complies with :py:class:`twisted.web.websocket.WebSocketProtocol` .
 We implement ``negotiationFinished``, the method called once the websocket connection is fully set up, to begin sending a text message to our peer once per second.
 
-Then, we will need an index page for our live websocket site, with a button on it that hooks up a JavaScript function to connect to ``/webskt.rpy``:
+Then, we will need an index page for our live websocket site, with a button on it that hooks up a JavaScript function to connect to ``/websocket-server.rpy``:
 
 :download:`index.html <../../examples/websocket/index.html>`
 
 .. literalinclude:: ../../examples/websocket/index.html
 
 Finally, we need our JavaScript source code that actually does the connecting of various events.
-Learning how to program in JavaScript is a bit outside the scope of this tutorial, but hopefully its function is obvious - we connect a websocket to the URL ``ws://localhost:8080/webskt.rpy`` , and then hook up event-handlers for when the socket connects, receives messages, receives errors, and closes:
+Learning how to program in JavaScript is a bit outside the scope of this tutorial, but hopefully its function is obvious - we connect a websocket to the URL ``ws://localhost:8080/websocket-server.rpy`` , and then hook up event-handlers for when the socket connects, receives messages, receives errors, and closes:
 
 :download:`script.js <../../examples/websocket/script.js>`
 

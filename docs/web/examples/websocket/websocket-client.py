@@ -31,7 +31,9 @@ class MyClient:
 
 
 async def main(reactor: Any) -> None:
-    endpoint = WebSocketClientEndpoint.new(reactor, "ws://localhost:8080/webskt.rpy")
+    endpoint = WebSocketClientEndpoint.new(
+        reactor, "ws://localhost:8080/websocket-server.rpy"
+    )
     print("connecting...")
     await endpoint.connect(MyClient())
     print("connected!")
