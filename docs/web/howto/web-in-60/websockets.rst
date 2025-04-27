@@ -36,9 +36,9 @@ Then, we will need an index page for our live websocket site, with a button on i
 Finally, we need our JavaScript source code that actually does the connecting of various events.
 Learning how to program in JavaScript is a bit outside the scope of this tutorial, but hopefully its function is obvious - we connect a websocket to the URL ``ws://localhost:8080/websocket-server.rpy`` , and then hook up event-handlers for when the socket connects, receives messages, receives errors, and closes:
 
-:download:`script.js <../../examples/websocket/script.js>`
+:download:`websocket-browser-client.js <../../examples/websocket/websocket-browser-client.js>`
 
-.. literalinclude:: ../../examples/websocket/script.js
+.. literalinclude:: ../../examples/websocket/websocket-browser-client.js
 
 Note that, upon connect, the web socket sends a message to the server.
 
@@ -66,7 +66,7 @@ Of course, if we have a server, we may also want to talk to it from Python.
 To do that, let's build a simple websocket client, with :py:class:`twisted.web.websocket.WebSocketClientEndpoint`.
 It looks much the same as the server, but, we will just print out each data message we receive.
 
-:download:`script.js <../../examples/websocket/websocket-client.py>`
+:download:`websocket-client.py <../../examples/websocket/websocket-client.py>`
 
 .. literalinclude:: ../../examples/websocket/websocket-client.py
 
