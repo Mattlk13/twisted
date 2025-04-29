@@ -302,7 +302,7 @@ class BindAuthority(FileAuthority):
     Supports only C{$ORIGIN} and C{$TTL} directives.
     """
 
-    def loadFile(self, filename: bytes | str) -> None:
+    def loadFile(self, filename):
         """
         Load records from C{filename}.
 
@@ -311,7 +311,7 @@ class BindAuthority(FileAuthority):
         fp = FilePath(filename)
         # Not the best way to set an origin. It can be set using $ORIGIN
         # though.
-        self.origin = nativeString(fp.basename()) + "."
+        self.origin = fp.asTextMode().basename() + "."
 
         lines = fp.getContent().splitlines(True)
         lines = self.stripComments(lines)

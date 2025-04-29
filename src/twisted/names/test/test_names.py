@@ -1246,9 +1246,6 @@ class BindAuthorityTests(unittest.TestCase):
         self.assertTrue(authority.records, "No records were loaded from the BIND zone")
 
         self.assertIsInstance(authority.records, dict, "Records is not a dictionary")
-        self.assertGreater(
-            len(authority.records), 0, "No domains were parsed into records"
-        )
 
     def test_loadBindZonePathAsBytes(self) -> None:
         """
@@ -1264,9 +1261,6 @@ class BindAuthorityTests(unittest.TestCase):
         self.assertTrue(authority.records, "No records were loaded from the BIND zone")
 
         self.assertIsInstance(authority.records, dict, "Records is not a dictionary")
-        self.assertGreater(
-            len(authority.records), 0, "No domains were parsed into records"
-        )
 
     def test_ttl(self):
         """
