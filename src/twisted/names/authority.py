@@ -9,7 +9,6 @@ Authoritative resolvers.
 
 import os
 import time
-from typing import AnyStr
 
 from twisted.internet import defer
 from twisted.names import common, dns, error
@@ -303,12 +302,11 @@ class BindAuthority(FileAuthority):
     Supports only C{$ORIGIN} and C{$TTL} directives.
     """
 
-    def loadFile(self, filename: AnyStr) -> None:
+    def loadFile(self, filename: bytes | str) -> None:
         """
         Load records from C{filename}.
 
         @param filename: file to read from
-        @type filename: bytes or str C{AnyStr}
         """
         fp = FilePath(filename)
         # Not the best way to set an origin. It can be set using $ORIGIN

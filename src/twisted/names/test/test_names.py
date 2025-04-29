@@ -1223,16 +1223,16 @@ class BindAuthorityTests(unittest.TestCase):
         @return: a new bind authority
         @rtype: L{twisted.names.authority.BindAuthority}
         """
-        fp: FilePath[AnyStr] = FilePath(path)
+        fp = FilePath(path)
         fp.setContent(s)
 
         return authority.BindAuthority(fp.path)
 
-    def setUp(self):
-        path = self.mktemp().encode("ascii")
+    def setUp(self) -> None:
+        path = FilePath(self.mktemp()).asBytesMode().path
         self.auth = self.loadBindString(sampleBindZone, path)
 
-    def test_loadBindZonePathAsString(self):
+    def test_loadBindZonePathAsString(self) -> None:
         """
         L{BindAuthority} loads a BIND zone with filepath as type string.
         """
@@ -1250,11 +1250,11 @@ class BindAuthorityTests(unittest.TestCase):
             len(authority.records), 0, "No domains were parsed into records"
         )
 
-    def test_loadBindZonePathAsBytes(self):
+    def test_loadBindZonePathAsBytes(self) -> None:
         """
         L{BindAuthority} loads a BIND zone with filepath as type bytes.
         """
-        path = self.mktemp().encode("ascii")
+        path = FilePath(self.mktemp()).asBytesMode().path
         authority = self.loadBindString(sampleBindZone, path)
 
         self.assertIsInstance(
@@ -1357,7 +1357,7 @@ class BindAuthorityTests(unittest.TestCase):
         """
         loadBindString raises NotImplementedError on invalid records.
         """
-        path = self.mktemp().encode("ascii")
+        path = FilePath(self.mktemp()).asBytesMode().path
         with self.assertRaises(NotImplementedError) as e:
             self.loadBindString(b"example.com. IN LOL 192.168.0.1", path)
         self.assertEqual("Record type 'LOL' not supported", e.exception.args[0])
