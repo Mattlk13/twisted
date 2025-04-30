@@ -25,7 +25,7 @@ def test_log_publisher_call_dispatch(benchmark):
     """
     Dispatch a single event to a single publisher that has multiple observers.
     """
-    num_observers =2000
+    num_observers = 2000
 
     observers: List[DummyObserver] = [DummyObserver() for _ in range(num_observers)]
     publisher = LogPublisher(*observers)
