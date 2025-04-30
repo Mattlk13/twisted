@@ -3,9 +3,6 @@ Benchmarks for LogPublisher event dispatching.
 """
 
 from typing import List
-
-import pytest
-
 from twisted.logger import LogEvent, LogLevel, LogPublisher
 
 
