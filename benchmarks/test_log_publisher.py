@@ -2,15 +2,18 @@
 Benchmarks for LogPublisher event dispatching.
 """
 
-import pytest
-from twisted.logger import LogPublisher, LogLevel, LogEvent
 from typing import List
+
+import pytest
+
+from twisted.logger import LogEvent, LogLevel, LogPublisher
 
 
 class DummyObserver:
     """
     An observer that just records the last event it received.
     """
+
     def __init__(self):
         self.last_event = None
 
