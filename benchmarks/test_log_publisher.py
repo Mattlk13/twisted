@@ -24,7 +24,7 @@ class DummyObserver:
 @pytest.mark.parametrize("num_observers", [100, 500, 1000])
 def test_log_publisher_call_dispatch(benchmark, num_observers):
     """
-    Benchmark the time it takes to dispatch an event to N observers.
+    Dispatch a single event to a single publisher that has multiple observers.
     """
 
     observers: List[DummyObserver] = [DummyObserver() for _ in range(num_observers)]
