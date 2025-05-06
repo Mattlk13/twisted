@@ -47,7 +47,13 @@ class WeirdResource(Resource):
         return b""
 
 
-class SlowResource(Resource):
+class DelayedResponse(Resource):
+    """
+    A resource that will not respond to a C{GET} request right away.  You will
+    need to use the C{request.write(b'RESPONSE BODY')} and C{request.finish()}
+    to trigger a response.
+    """
+
     def render_GET(self, request: Request) -> int:
         self.request = request
         return NOT_DONE_YET
@@ -136,7 +142,7 @@ class WebSocketFixture(Generic[WSP]):
     resource: Resource = field(default_factory=Resource)
     portNumber: int = 80
     servers: list[WSP] = field(default_factory=list)
-    slowResource: SlowResource = field(default_factory=SlowResource)
+    slowResource: DelayedResponse = field(default_factory=DelayedResponse)
 
     @classmethod
     def new(cls, clientFactory: WebSocketClientFactory[WSP]) -> WebSocketFixture[WSP]:
