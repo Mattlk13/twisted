@@ -557,6 +557,9 @@ class MemoryReactor:
         self.nameResolver = SynchronousResolver()
 
     def installNameResolver(self, resolver: IHostnameResolver) -> IHostnameResolver:
+        """
+        Implement L{IReactorPluggableNameResolver}.
+        """
         oldResolver = self.nameResolver
         self.nameResolver = resolver
         return oldResolver
@@ -854,6 +857,9 @@ class RaisingMemoryReactor:
         self.nameResolver: IHostnameResolver = SynchronousResolver()
 
     def installNameResolver(self, nameResolver: IHostnameResolver) -> IHostnameResolver:
+        """
+        Implement L{IReactorPluggableNameResolver}.
+        """
         previous, self.nameResolver = self.nameResolver, nameResolver
         return previous
 
