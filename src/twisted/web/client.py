@@ -143,7 +143,7 @@ class URI:
         scheme, netloc, path, params, query, fragment = http.urlparse(uri)
 
         if defaultPort is None:
-            if scheme == b"https":
+            if scheme in {b"https", b"wss"}:
                 defaultPort = 443
             else:
                 defaultPort = 80
