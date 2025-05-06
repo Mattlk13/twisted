@@ -16,6 +16,8 @@ option `dependencies`.
 The `requires-python` option from `pyproject.toml` declares the minimum supported Python version.
 
 
+.. _Optional Dependencies:
+
 Optional Dependencies
 ---------------------
 

@@ -71,6 +71,12 @@ To do that, let's build a simple websocket client, with :py:class:`twisted.web.w
 This client could talk to **any** WebSocket server, regardless of how it was implemented, but since we just built one with Twisted, we'll use that one.
 It looks much the same as the server, but, we will just print out each data message we receive.
 
+.. note::
+
+   In this example, we use the ``ws://`` protocol which indicates a plain-text websocket connection.
+   Obtaining a valid HTTPS certificate for your local example goes a bit beyond the scope of this tutorial, but you can test using the ``wss://`` protocol, as well as testing against a non-Twisted server, by substituting the URL ``"wss://echo.websocket.org/"`` in the client demo.
+   Make sure to also install the ``[tls]`` :ref:`optional dependency group <Optional Dependencies>` to install the required dependencies for Twisted's HTTPS client.
+
 :download:`websocket-client.py <../../examples/websocket/websocket-client.py>`
 
 .. literalinclude:: ../../examples/websocket/websocket-client.py
