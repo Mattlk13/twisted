@@ -1007,7 +1007,7 @@ class _StandardEndpointFactory:
         self._connectTimeout = connectTimeout
         self._bindAddress = bindAddress
 
-    def endpointForURI(self, uri):
+    def endpointForURI(self, uri: URI) -> IStreamClientEndpoint:
         """
         Connect directly over TCP for C{b'http'} scheme, and TLS for
         C{b'https'}.
@@ -1015,7 +1015,6 @@ class _StandardEndpointFactory:
         @param uri: L{URI} to connect to.
 
         @return: Endpoint to connect to.
-        @rtype: L{IStreamClientEndpoint}
         """
         kwargs = {}
         if self._connectTimeout is not None:
