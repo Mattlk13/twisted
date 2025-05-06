@@ -9,8 +9,7 @@ from zope.interface import implementer
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionDone
 from twisted.internet.interfaces import IPushProducer
-from twisted.internet.protocol import Protocol, connectionDone
-from twisted.internet.testing import MemoryReactorClock
+from twisted.internet.testing import AccumulatingProtocol, MemoryReactorClock
 from twisted.python.failure import Failure
 from twisted.test.iosim import ConnectionCompleter, IOPump
 from twisted.trial.unittest import SynchronousTestCase
@@ -314,31 +313,18 @@ class WebSocketTests(SynchronousTestCase):
 
         rejected = self.failureResultOf(connected, ConnectionRejected)
         resp = rejected.value.response
-        resp.deliverBody(p := MyProto())
-        self.assertEqual(p.data, [])
+        resp.deliverBody(p := AccumulatingProtocol())
+        self.assertEqual(p.data, b"")
         req = fixture.slowResource.request
         req.write(b"hello")
         pump.flush()
-        self.assertEqual(p.data, [b"hello"])
+        self.assertEqual(p.data, b"hello")
         req.write(b"world")
         pump.flush()
-        self.assertEqual(p.data, [b"hello", b"world"])
+        self.assertEqual(p.data, b"helloworld")
         req.finish()
-        self.assertIs(p.reason, None)
+        self.assertIs(p.closedReason, None)
         pump.flush()
-        assert p.reason is not None, "mainly for mypy"
-        self.assertEqual(p.reason.type, ConnectionDone)
-
-
-class MyProto(Protocol):
-    reason: Failure | None = None
-    data: list[bytes]
-
-    def connectionMade(self) -> None:
-        self.data = []
-
-    def dataReceived(self, data: bytes) -> None:
-        self.data.append(data)
-
-    def connectionLost(self, reason: Failure = connectionDone) -> None:
-        self.reason = reason
+        # expressed this way because assertIs isn't a guard for mypy
+        assert p.closedReason is not None, "should be closed now"
+        self.assertEqual(p.closedReason.type, ConnectionDone)
