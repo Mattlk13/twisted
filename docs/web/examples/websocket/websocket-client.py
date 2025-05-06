@@ -16,10 +16,10 @@ class WebSocketClientDemo:
         print(f"received text: {data!r}")
 
     def negotiationStarted(self, transport: WebSocketTransport) -> None:
-        ...
+        self.transport = transport
 
     def negotiationFinished(self) -> None:
-        ...
+        self.transport.sendTextMessage("hello, world!")
 
     def bytesMessageReceived(self, data: bytes) -> None:
         ...
