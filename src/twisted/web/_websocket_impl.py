@@ -107,6 +107,18 @@ class WebSocketProtocol(TypingProtocol):
     """
     An object that conforms to L{WebSocketProtocol} can receive all the events
     from a websocket connection.
+
+    @note: While this is I{sort of} like a L{byte-stream protocol
+        <twisted.internet.interfaces.IProtocol>}, the interface is distinct in
+        a few ways; in particular, we have discrete C{negotiationStarted} and
+        C{negotiationFinished} methods, representing those events in the
+        websocket handshaking process, and no C{connectionMade}; similarly,
+        since websockets can natively support both text and bytes messages,
+        rather than fragmentable segments of a byte stream, we have
+        C{textMessageReceived} and C{bytesMessageReceived} but no
+        C{dataReceived}.  Finally, this is a L{typing.Protocol} and not a
+        L{zope.interface.Interface}, since it does not predate the L{typing}
+        module.
     """
 
     def negotiationStarted(self, transport: WebSocketTransport) -> None:
