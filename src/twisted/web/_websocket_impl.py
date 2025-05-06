@@ -1,9 +1,10 @@
 # -*- test-case-name: twisted.web.test.test_websocket -*-
 from __future__ import annotations
 
+import typing
 from dataclasses import dataclass, field
 from functools import singledispatch
-from typing import Callable, Generic, Protocol as TypingProtocol, TypeVar, Union
+from typing import Callable, Generic, TypeVar, Union
 
 from zope.interface import implementer
 
@@ -49,7 +50,7 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Request
 
 
-class WebSocketTransport(TypingProtocol):
+class WebSocketTransport(typing.Protocol):
     """
     The transport that can send websocket messages.
     """
@@ -103,7 +104,7 @@ class ConnectionRejected(Exception):
     response: Response
 
 
-class WebSocketProtocol(TypingProtocol):
+class WebSocketProtocol(typing.Protocol):
     """
     An object that conforms to L{WebSocketProtocol} can receive all the events
     from a websocket connection.
@@ -159,7 +160,7 @@ _Bootstrap = Callable[[Union[WSConnection, Connection], ITransport], None]
 _log = Logger()
 
 
-class WebSocketServerFactory(TypingProtocol[_WSP]):
+class WebSocketServerFactory(typing.Protocol[_WSP]):
     """
     A L{WebSocketServerFactory} is a factory for a particular kind of
     L{WebSocketProtocol} that implements server-side websocket listeners via
@@ -177,7 +178,7 @@ class WebSocketServerFactory(TypingProtocol[_WSP]):
         """
 
 
-class WebSocketClientFactory(TypingProtocol[_WSP]):
+class WebSocketClientFactory(typing.Protocol[_WSP]):
     """
     A L{WebSocketClientFactory} is a factory for a particular kind of
     L{WebSocketProtocol} that implements client-side websocket listeners via
