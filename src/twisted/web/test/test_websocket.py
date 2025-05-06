@@ -243,6 +243,12 @@ class WebSocketTests(SynchronousTestCase):
         self.assertIs(pump.serverIO.producer, None)
 
     def test_pingPong(self) -> None:
+        """
+        Internally, Twisted's websocket resource responds to all ping requests
+        with a pong as required by the spec, so peers can issue a C{ping} and
+        receive a C{pong} message with the same payload; our websocket
+        transport also implements a C{ping} method to send that message.
+        """
         fixture = WebSocketFixture.new(MyClientFactory())
         connected = Deferred.fromCoroutine(fixture.connect())
         pump = fixture.complete()
