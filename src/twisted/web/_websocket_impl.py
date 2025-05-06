@@ -136,7 +136,25 @@ class WebSocketProtocol(typing.Protocol):
 
     def pongReceived(self, payload: bytes) -> None:
         """
-        A 'pong' message was received.
+        A Pong message was received.
+
+        @note: Per U{the standard
+            <https://www.rfc-editor.org/rfc/rfc6455#section-5.5.2>}::
+
+                A Pong frame sent in response to a Ping frame must have identical
+                "Application data" as found in the message body of the Ping frame
+                being replied to.
+
+                If an endpoint receives a Ping frame and has not yet sent Pong
+                frame(s) in response to previous Ping frame(s), the endpoint MAY
+                elect to send a Pong frame for only the most recently processed
+                Ping frame.
+
+            Given that some Pong frames may be dropped, this event should only
+            be used in concert with the transport's L{.ping
+            <WebSocketTransport.ping>} method for its intended purpose, to
+            measure latency and connection durability, not to transport
+            application data.
         """
 
     def textMessageReceived(self, message: str) -> None:
