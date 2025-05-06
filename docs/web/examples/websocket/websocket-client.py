@@ -6,6 +6,10 @@ from twisted.web.websocket import WebSocketClientEndpoint, WebSocketTransport
 
 
 class WebSocketClientDemo:
+    @classmethod
+    def buildProtocol(cls, uri: str) -> WebSocketClientDemo:
+        return cls()
+
     def textMessageReceived(self, data: str) -> None:
         print(f"received text: {data!r}")
 
@@ -25,17 +29,12 @@ class WebSocketClientDemo:
         ...
 
 
-class MyClient:
-    def buildProtocol(self, uri: str) -> WebSocketClientDemo:
-        return WebSocketClientDemo()
-
-
 async def main(reactor: Any) -> None:
     endpoint = WebSocketClientEndpoint.new(
         reactor, "ws://localhost:8080/websocket-server.rpy"
     )
     print("connecting...")
-    await endpoint.connect(MyClient())
+    await endpoint.connect(WebSocketClientDemo)
     print("connected!")
     await deferLater(reactor, 10)
 

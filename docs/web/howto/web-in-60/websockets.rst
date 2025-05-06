@@ -24,7 +24,7 @@ First, let's do the Twisted part.  We need a :py:class:`twisted.web.websocket.We
 
 .. literalinclude:: ../../examples/websocket/websocket-server.rpy
 
-Note that ``WebSocketEchoFactory`` complies with the :py:class:`twisted.web.websocket.WebSocketServerFactory` :py:class:`protocol <typing.Protocol>`, returning a ``WebSocketDemo`` that complies with :py:class:`twisted.web.websocket.WebSocketProtocol` .
+Note that by using a ``@classmethod`` for ``buildProtocol``, the *type* of  ``WebSocketDemo`` complies with the :py:class:`twisted.web.websocket.WebSocketServerFactory` :py:class:`protocol <typing.Protocol>`, returning a ``WebSocketDemo`` that complies with :py:class:`twisted.web.websocket.WebSocketProtocol` ; we can then pass the type of ``WebSocketDemo`` itself, without instantiating it, to :py:class:`twisted.web.websocket.WebSocketResource`.
 We implement ``negotiationFinished``, the method called once the websocket connection is fully set up, to begin sending a text message to our peer once per second.
 
 Then, we will need an index page for our live websocket site, with a button on it that hooks up a JavaScript function to connect to ``/websocket-server.rpy``:

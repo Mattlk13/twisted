@@ -9,6 +9,10 @@ from twisted.internet.task import LoopingCall
 class WebSocketDemo:
     loop: LoopingCall | None = None
 
+    @classmethod
+    def buildProtocol(cls, request: IRequest) -> WebSocketDemo:
+        return cls()
+
     def negotiationStarted(self, transport: WebSocketTransport) -> None:
         self.transport = transport
         self.counter = 0
@@ -28,13 +32,10 @@ class WebSocketDemo:
         if self.loop is not None:
             self.loop.stop()
 
+    # Since WebSocketProtocol is a typing.Protocol and not a class, we must
+    # provide implementations for all events, even those we don't care about.
     def bytesMessageReceived(self, data: bytes) -> None: ...
     def pongReceived(self, payload: bytes) -> None: ...
 
 
-class WebSocketEchoFactory:
-    def buildProtocol(self, request: IRequest) -> WebSocketDemo:
-        return WebSocketDemo()
-
-
-resource = WebSocketResource(WebSocketEchoFactory())
+resource = WebSocketResource(WebSocketDemo)
