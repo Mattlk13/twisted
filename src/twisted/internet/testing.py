@@ -114,8 +114,8 @@ class AccumulatingProtocol(protocol.Protocol):
     def connectionMade(self) -> None:
         self.made = 1
         factory: _ProtocolConnectionMadeHaver | None = (
-            self.factory
-        )  # type:ignore[assignment]
+            self.factory  # type:ignore[assignment]
+        )
         if factory is not None and factory.protocolConnectionMade is not None:
             d = factory.protocolConnectionMade
             factory.protocolConnectionMade = None
