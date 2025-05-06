@@ -422,19 +422,25 @@ class _FakeConnector:
 
 @implementer(IHostResolution)
 @dataclass
-class ImmediateResolution:
+class _SynchronousResolution:
     name: str
 
     def cancel(self) -> None:
         """
         Provided just for interface compliance; it should be impossible to
-        reach here, since it's resolved immediately.
+        reach here, since it's resolved synchronously.
         """
         raise Exception("already resolved")  # pragma: no cover
 
 
 @implementer(IHostnameResolver)
-class ImmediateResolver:
+class SynchronousResolver:
+    """
+    A very simple L{IHostnameResolver} that immediately, synchronously resolves
+    all host names to a single static address (TCPv4, 127.0.0.1) while
+    preserving any requested port number.
+    """
+
     def resolveHostName(
         self,
         resolutionReceiver: IResolutionReceiver,
@@ -443,7 +449,11 @@ class ImmediateResolver:
         addressTypes: Sequence[type[IAddress]] | None = None,
         transportSemantics: str = "TCP",
     ) -> IHostResolution:
-        resolution = ImmediateResolution(hostName)
+        """
+        Implement L{IHostnameResolver.resolveHostName} to synchronously resolve
+        the name and complete resolution before returning.
+        """
+        resolution = _SynchronousResolution(hostName)
         resolutionReceiver.resolutionBegan(resolution)
         resolutionReceiver.addressResolved(IPv4Address("TCP", "127.0.0.1", portNumber))
         resolutionReceiver.resolutionComplete()
@@ -544,7 +554,7 @@ class MemoryReactor:
 
         self.readers = set()
         self.writers = set()
-        self.nameResolver = ImmediateResolver()
+        self.nameResolver = SynchronousResolver()
 
     def installNameResolver(self, resolver: IHostnameResolver) -> IHostnameResolver:
         oldResolver = self.nameResolver
@@ -841,7 +851,7 @@ class RaisingMemoryReactor:
         """
         self._listenException = listenException
         self._connectException = connectException
-        self.nameResolver: IHostnameResolver = ImmediateResolver()
+        self.nameResolver: IHostnameResolver = SynchronousResolver()
 
     def installNameResolver(self, nameResolver: IHostnameResolver) -> IHostnameResolver:
         previous, self.nameResolver = self.nameResolver, nameResolver
