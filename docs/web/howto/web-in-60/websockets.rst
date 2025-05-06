@@ -16,7 +16,8 @@ For the purposes of our example here, you will need to have some familiarity wit
 WebSocket Server
 ----------------
 
-Let's build a demo of a simple websocket server communicating with a web browser.
+Let's use Twisted to create a simple websocket server, and then build a web-browser based client to communicate with it.
+
 To begin with, we will need a folder with 3 files in it.
 First, let's do the Twisted part.  We need a :py:class:`twisted.web.websocket.WebSocketResource` to be served at a known URL, so let's put one into a ``.rpy`` file called ``websocket-server.rpy`` :
 
@@ -62,8 +63,9 @@ Since :py:class:`twisted.web.websocket.WebSocketResource` is a standard Twisted 
 WebSocket Client
 ----------------
 
-Of course, if we have a server, we may also want to talk to it from Python.
+Of course, if we have a server, we may also want to talk to it from our Twisted applications.
 To do that, let's build a simple websocket client, with :py:class:`twisted.web.websocket.WebSocketClientEndpoint`.
+This client could talk to **any** WebSocket server, regardless of how it was implemented, but since we just built one with Twisted, we'll use that one.
 It looks much the same as the server, but, we will just print out each data message we receive.
 
 :download:`websocket-client.py <../../examples/websocket/websocket-client.py>`
