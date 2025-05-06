@@ -37,14 +37,20 @@ Then, we will need an index page for our live websocket site, with a button on i
    :language: html
 
 Finally, we need our JavaScript source code that actually does the connecting of various events.
-Learning how to program in JavaScript is a bit outside the scope of this tutorial, but hopefully its function is obvious - we connect a websocket to the URL ``ws://localhost:8080/websocket-server.rpy`` , and then hook up event-handlers for when the socket connects, receives messages, receives errors, and closes:
+Learning how to program in JavaScript, or even the entire JavaScript WebSocket API, is a bit outside the scope of this tutorial.
+You can read more about WebSocket JavaScript API at the `MDN WebSocket documentation<https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_client_applications>`_.
+Hopefully this minimal example is clear:
 
 :download:`websocket-browser-client.js <../../examples/websocket/websocket-browser-client.js>`
 
 .. literalinclude:: ../../examples/websocket/websocket-browser-client.js
    :language: js
 
-Note that, upon connect, the web socket sends a message to the server.
+We define a function, ``doConnect``, that the button in our HTML example above will call, which:
+
+1. creates a new websocket that will connect to the URL ``ws://localhost:8080/websocket-server.rpy`` .
+2. adds an event handler to that websocket for when it connects, to send a message to the server,
+3. and also adds event handlers for when the connection receives a text message, an error, or a closure from the peer, to display those events to the user.
 
 If you were to put these all into a folder called ``my-websocket-demo`` , you can use ``twist`` to serve them, via ``twist web --path ./my-websocket-demo``.
 Then, you can open up a web browser, pointed at ``http://localhost:8080/`` and see a "connect websocket" button.
