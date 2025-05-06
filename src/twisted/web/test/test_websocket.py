@@ -259,6 +259,10 @@ class WebSocketTests(SynchronousTestCase):
         self.assertEqual(wsp.pongs, [b"123"])
 
     def test_serverConnectionLost(self) -> None:
+        """
+        When the underlying TCP connection is lost,
+        L{WebSocketProtocol.connectionLost} is invoked.
+        """
         fixture = WebSocketFixture.new(MyClientFactory())
         connected = Deferred.fromCoroutine(fixture.connect())
         pump = fixture.complete()
