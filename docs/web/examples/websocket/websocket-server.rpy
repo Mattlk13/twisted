@@ -21,9 +21,6 @@ class WebSocketDemo:
         self.loop = LoopingCall(heartbeat)
         self.loop.start(1.0)
 
-    def bytesMessageReceived(self, data: bytes) -> None:
-        pass
-
     def textMessageReceived(self, data: str) -> None:
         self.transport.sendTextMessage(f"reply to {data}")
 
@@ -31,8 +28,8 @@ class WebSocketDemo:
         if self.loop is not None:
             self.loop.stop()
 
-    def pongReceived(self, payload: bytes) -> None:
-        pass
+    def bytesMessageReceived(self, data: bytes) -> None: ...
+    def pongReceived(self, payload: bytes) -> None: ...
 
 
 class WebSocketEchoFactory:
