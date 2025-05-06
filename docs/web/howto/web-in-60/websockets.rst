@@ -89,6 +89,7 @@ If you leave the same server running, the one you just tested with your browser,
    connecting...
    connected!
    received text: 'heartbeat 1'
+   received text: 'reply to hello, world!'
    received text: 'heartbeat 2'
    received text: 'heartbeat 3'
    received text: 'heartbeat 4'
