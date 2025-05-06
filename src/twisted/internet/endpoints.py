@@ -866,7 +866,17 @@ class HostnameEndpoint:
         """
 
         self._reactor = reactor
+
+        # We retrieve the actual name resolver to use from the reactor at
+        # C{connect()} time, in case the reactor modifies its name-resolution
+        # configuration after this HostnameEndpoint has been constructed.
+        # However, in order to make any warnings a bit more legible in the much
+        # more common case that the reactor's name resolution is configured
+        # before any endpoints are constructed, this eagerly validates the name
+        # resolver's configuration during endpoint construction but discards
+        # the actual resolver retrieved.
         self._getNameResolverAndMaybeWarn(reactor)
+
         [self._badHostname, self._hostBytes, self._hostText] = self._hostAsBytesAndText(
             host
         )
