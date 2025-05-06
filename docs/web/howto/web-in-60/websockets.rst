@@ -24,6 +24,7 @@ First, let's do the Twisted part.  We need a :py:class:`twisted.web.websocket.We
 :download:`websocket-server.rpy <../../examples/websocket/websocket-server.rpy>`
 
 .. literalinclude:: ../../examples/websocket/websocket-server.rpy
+   :language: python
 
 Note that by using a ``@classmethod`` for ``buildProtocol``, the *type* of  ``WebSocketDemo`` complies with the :py:class:`twisted.web.websocket.WebSocketServerFactory` :py:class:`protocol <typing.Protocol>`, returning a ``WebSocketDemo`` that complies with :py:class:`twisted.web.websocket.WebSocketProtocol` ; we can then pass the type of ``WebSocketDemo`` itself, without instantiating it, to :py:class:`twisted.web.websocket.WebSocketResource`.
 We implement ``negotiationFinished``, the method called once the websocket connection is fully set up, to begin sending a text message to our peer once per second.
@@ -33,6 +34,7 @@ Then, we will need an index page for our live websocket site, with a button on i
 :download:`index.html <../../examples/websocket/index.html>`
 
 .. literalinclude:: ../../examples/websocket/index.html
+   :language: html
 
 Finally, we need our JavaScript source code that actually does the connecting of various events.
 Learning how to program in JavaScript is a bit outside the scope of this tutorial, but hopefully its function is obvious - we connect a websocket to the URL ``ws://localhost:8080/websocket-server.rpy`` , and then hook up event-handlers for when the socket connects, receives messages, receives errors, and closes:
@@ -40,6 +42,7 @@ Learning how to program in JavaScript is a bit outside the scope of this tutoria
 :download:`websocket-browser-client.js <../../examples/websocket/websocket-browser-client.js>`
 
 .. literalinclude:: ../../examples/websocket/websocket-browser-client.js
+   :language: js
 
 Note that, upon connect, the web socket sends a message to the server.
 
@@ -71,6 +74,7 @@ It looks much the same as the server, but, we will just print out each data mess
 :download:`websocket-client.py <../../examples/websocket/websocket-client.py>`
 
 .. literalinclude:: ../../examples/websocket/websocket-client.py
+   :language: python
 
 If you leave the same server running, the one you just tested with your browser, and then run this example, you should see something like this:
 
