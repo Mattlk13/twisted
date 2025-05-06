@@ -1,4 +1,11 @@
 # -*- test-case-name: twisted.web.test.test_websocket -*-
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Private implementation module for public L{twisted.web.websocket}.
+"""
+
 from __future__ import annotations
 
 import typing
