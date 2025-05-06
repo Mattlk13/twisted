@@ -1,3 +1,4 @@
+from __future__ import annotations
 from twisted.python.failure import Failure
 from twisted.web.iweb import IRequest
 from twisted.web.resource import Resource
