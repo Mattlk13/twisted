@@ -7,6 +7,7 @@ Assorted functionality which is commonly useful when writing unit tests.
 """
 from __future__ import annotations
 
+import typing
 from dataclasses import dataclass
 from io import BytesIO
 from socket import AF_INET, AF_INET6
@@ -78,6 +79,14 @@ __all__ = [
 _P = ParamSpec("_P")
 
 
+class _ProtocolConnectionMadeHaver(typing.Protocol):
+    """
+    Explicit stipulation of the implicit requirement of L{AccumulatingProtocol}'s factory.
+    """
+
+    protocolConnectionMade: Deferred[AccumulatingProtocol] | None
+
+
 class AccumulatingProtocol(protocol.Protocol):
     """
     L{AccumulatingProtocol} is an L{IProtocol} implementation which collects
@@ -93,26 +102,29 @@ class AccumulatingProtocol(protocol.Protocol):
         C{connectionLost} is called.
     """
 
+    made: int
+    closed: int
     made = closed = 0
-    closedReason = None
+    closedReason: failure.Failure | None = None
+    closedDeferred: Deferred[None] | None = None
+    data: bytes = b""
 
-    closedDeferred = None
+    factory: protocol.Factory | None = None
 
-    data = b""
-
-    factory = None
-
-    def connectionMade(self):
+    def connectionMade(self) -> None:
         self.made = 1
-        if self.factory is not None and self.factory.protocolConnectionMade is not None:
-            d = self.factory.protocolConnectionMade
-            self.factory.protocolConnectionMade = None
+        factory: _ProtocolConnectionMadeHaver | None = (
+            self.factory
+        )  # type:ignore[assignment]
+        if factory is not None and factory.protocolConnectionMade is not None:
+            d = factory.protocolConnectionMade
+            factory.protocolConnectionMade = None
             d.callback(self)
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         self.data += data
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: failure.Failure | None = None) -> None:
         self.closed = 1
         self.closedReason = reason
         if self.closedDeferred is not None:
@@ -1072,7 +1084,7 @@ def _benchmarkWithReactor(
             Generator[Deferred[Any], Any, _T],
             Deferred[_T],
         ],
-    ]
+    ],
 ) -> Callable[[Any], None]:  # pragma: no cover
     """
     Decorator for running a benchmark tests that loops the reactor.
