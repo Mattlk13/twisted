@@ -166,7 +166,12 @@ class WebSocketFixture(Generic[WSP]):
 
     def complete(self, greet: bool = True) -> IOPump:
         """
-        There should be a single connection in progress; complete it.
+        There should be a single websocket connection in progress; complete it.
+
+        @param greet: Should we immediately issue a greeting, i.e. deliver any
+            pending buffered TCP data, upon connection?  If C{False}, the
+            caller must call C{flush} on the result to deliver any pending
+            data.
         """
         completer = ConnectionCompleter(self.reactor)
         succeeded = completer.succeedOnce(greet=greet)
