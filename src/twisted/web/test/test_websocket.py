@@ -124,9 +124,6 @@ else:
             self.transport.sendBytesMessage(b"request")
             return self.bDeferred
 
-        def goodbye(self) -> None:
-            self.transport.loseConnection()
-
     class MyFactory(WebSocketServerFactory[MyWSP]):
         fixture: WebSocketFixture[Any]
 
@@ -279,7 +276,7 @@ class WebSocketTests(SynchronousTestCase):
         wsClient = self.successResultOf(connected)
         self.assertIs(fixture.servers[0].wasLost, None)
         self.assertIs(wsClient.wasLost, None)
-        wsClient.goodbye()
+        wsClient.transport.loseConnection()
         self.assertIs(fixture.servers[0].wasLost, None)
         self.assertIs(wsClient.wasLost, None)
         pump.flush()
