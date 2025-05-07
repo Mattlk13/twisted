@@ -483,7 +483,7 @@ class WebSocketResource(Resource):
         assert t is not None, "channel transport not connected"
         assert wscon is not None, "connection not accepted by wsproto"
         wireProto = _WebSocketWireProtocol(wscon, serverBootstrap, wsprot)
-        request.channel.upgradeToProtocol(wireProto)
+        request.channel._protocolUpgradeForWebsockets(wireProto)
         t.write(toSend)
         wsprot.negotiationFinished()
         return NOT_DONE_YET
