@@ -76,6 +76,11 @@ else:
 
     @dataclass
     class MyWSP(WebSocketProtocol):
+        """
+        Used to implement both client-side and server-side WebSocket
+        application that will help with testing.
+        """
+
         pongs: list[bytes] = field(default_factory=list)
         wasLost: Failure | None = None
 
