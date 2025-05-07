@@ -265,8 +265,10 @@ class WebSocketClientEndpoint:
 
         @return: the newly constructed endpoint.
         """
-        sef = _StandardEndpointFactory(reactor, tlsPolicy, connectTimeout, bindAddress)
-        return WebSocketClientEndpoint(sef, url)
+        endpointFactory = _StandardEndpointFactory(
+            reactor, tlsPolicy, connectTimeout, bindAddress
+        )
+        return WebSocketClientEndpoint(endpointFactory, url)
 
     async def connect(self, protocolFactory: WebSocketClientFactory[_WSP]) -> _WSP:
         """
