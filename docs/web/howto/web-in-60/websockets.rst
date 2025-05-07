@@ -38,7 +38,7 @@ Then, we will need an index page for our live websocket site, with a button on i
 
 Finally, we need our JavaScript source code that actually does the connecting of various events.
 Learning how to program in JavaScript, or even the entire JavaScript WebSocket API, is a bit outside the scope of this tutorial.
-You can read more about WebSocket JavaScript API at the `MDN WebSocket documentation<https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_client_applications>`_.
+You can read more about WebSocket JavaScript API at the `MDN WebSocket documentation <https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_client_applications>`_\ .
 Hopefully this minimal example is clear:
 
 :download:`websocket-browser-client.js <../../examples/websocket/websocket-browser-client.js>`
