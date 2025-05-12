@@ -918,9 +918,7 @@ class IntegrationTestingMixin:
         )
         pump.flush()
         response = self.successResultOf(deferred)
-        self.assertEqual(
-            response.headers.getRawHeaders(b"x-an-header")[0], b"an-value"
-        )
+        self.assertEqual(response.headers.getRawHeaders(b"x-an-header")[0], b"an-value")
 
 
 @implementer(IAgentEndpointFactory)
