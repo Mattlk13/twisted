@@ -1360,7 +1360,7 @@ class BindAuthorityTests(unittest.TestCase):
         """
         $INCLUDE and $GENERATE raise NotImplementedError.
         """
-        path = self.mktemp().encode("ascii")
+        path = FilePath(self.mktemp()).asBytesMode().path
         for directive in (b"$INCLUDE", b"$GENERATE"):
             with self.assertRaises(NotImplementedError) as e:
                 self.loadBindString(directive + b" doesNotMatter", path)
