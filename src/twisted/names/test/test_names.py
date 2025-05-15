@@ -12,7 +12,6 @@ import socket
 from functools import partial, reduce
 from io import BytesIO
 from struct import pack
-from typing import AnyStr
 
 from twisted.internet import defer, error, reactor
 from twisted.internet.defer import succeed
@@ -1213,31 +1212,39 @@ class BindAuthorityTests(unittest.TestCase):
     Tests for L{twisted.names.authority.BindAuthority}.
     """
 
-    def loadBindString(self, s: bytes, path: AnyStr) -> authority.BindAuthority:
+    def loadBindString(
+        self, s: bytes, pathtype: str = "str"
+    ) -> authority.BindAuthority:
         """
         Create a new L{twisted.names.authority.BindAuthority} from C{s}.
 
         @param s: A string with BIND zone data.
         @type s: bytes
 
+        @param pathtype: A pathtype of a file to use for loading the BIND zone file . Can be 'str' or 'bytes'.
+        @type path: Str
+
         @return: a new bind authority
         @rtype: L{twisted.names.authority.BindAuthority}
         """
+        if pathtype == "bytes":
+            path = FilePath(self.mktemp()).asBytesMode().path
+        else:
+            path = self.mktemp()
+        # Convert path to FilePath which handles both str and bytes
         fp = FilePath(path)
         fp.setContent(s)
 
         return authority.BindAuthority(fp.path)
 
     def setUp(self) -> None:
-        path = FilePath(self.mktemp()).asBytesMode().path
-        self.auth = self.loadBindString(sampleBindZone, path)
+        self.auth = self.loadBindString(sampleBindZone)
 
     def test_loadBindZonePathAsString(self) -> None:
         """
         L{BindAuthority} loads a BIND zone with filepath as type string.
         """
-        path = self.mktemp()
-        authority = self.loadBindString(sampleBindZone, path)
+        authority = self.loadBindString(sampleBindZone)
 
         self.assertIsInstance(
             authority, BindAuthority, "Loaded object is not a BindAuthority"
@@ -1251,8 +1258,7 @@ class BindAuthorityTests(unittest.TestCase):
         """
         L{BindAuthority} loads a BIND zone with filepath as type bytes.
         """
-        path = FilePath(self.mktemp()).asBytesMode().path
-        authority = self.loadBindString(sampleBindZone, path)
+        authority = self.loadBindString(sampleBindZone, "bytes")
 
         self.assertIsInstance(
             authority, BindAuthority, "Loaded object is not a BindAuthority"
@@ -1351,19 +1357,17 @@ class BindAuthorityTests(unittest.TestCase):
         """
         loadBindString raises NotImplementedError on invalid records.
         """
-        path = FilePath(self.mktemp()).asBytesMode().path
         with self.assertRaises(NotImplementedError) as e:
-            self.loadBindString(b"example.com. IN LOL 192.168.0.1", path)
+            self.loadBindString(b"example.com. IN LOL 192.168.0.1")
         self.assertEqual("Record type 'LOL' not supported", e.exception.args[0])
 
     def test_invalidDirectives(self):
         """
         $INCLUDE and $GENERATE raise NotImplementedError.
         """
-        path = FilePath(self.mktemp()).asBytesMode().path
         for directive in (b"$INCLUDE", b"$GENERATE"):
             with self.assertRaises(NotImplementedError) as e:
-                self.loadBindString(directive + b" doesNotMatter", path)
+                self.loadBindString(directive + b" doesNotMatter")
             self.assertEqual(
                 nativeString(directive + b" directive not implemented"),
                 e.exception.args[0],
