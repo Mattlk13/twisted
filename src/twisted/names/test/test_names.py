@@ -1244,15 +1244,13 @@ class BindAuthorityTests(unittest.TestCase):
         """
         L{BindAuthority} loads a BIND zone with filepath as type string.
         """
-        authority = self.loadBindString(sampleBindZone)
-
         self.assertIsInstance(
-            authority, BindAuthority, "Loaded object is not a BindAuthority"
+            self.auth, BindAuthority, "Loaded object is not a BindAuthority"
         )
 
-        self.assertTrue(authority.records, "No records were loaded from the BIND zone")
+        self.assertTrue(self.auth.records, "No records were loaded from the BIND zone")
 
-        self.assertIsInstance(authority.records, dict, "Records is not a dictionary")
+        self.assertIsInstance(self.auth.records, dict, "Records is not a dictionary")
 
     def test_loadBindZonePathAsBytes(self) -> None:
         """
