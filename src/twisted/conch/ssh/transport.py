@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives.asymmetric import dh, ec, x25519
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 try:
-    from cryptography.hazmat.primitives.decrepit.ciphers import TripleDES
+    from cryptography.hazmat.decrepit.ciphers import TripleDES
 except ImportError:
     # Deprecated path, will be removed in cryptography 48.0.0
     from cryptography.hazmat.primitives.ciphers.algorithms import TripleDES
