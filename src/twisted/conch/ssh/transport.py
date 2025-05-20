@@ -31,7 +31,7 @@ try:
     )
 except ImportError:
     # Deprecated path, will be removed in cryptography 48.0.0
-    from cryptography.hazmat.primitives.ciphers.algorithms import TripleDES
+    from cryptography.hazmat.decrepit.ciphers.algorithms import TripleDES
 
 from typing_extensions import Literal
 
