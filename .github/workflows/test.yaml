@@ -550,7 +550,7 @@ jobs:
         path: dist
 
     - name: Publish to PyPI - on tag
-      uses: pypa/gh-action-pypi-publish@v1.12.2
+      uses: pypa/gh-action-pypi-publish@release/v1
 
 
   # We have this job so that the PR can be blocked on a single job.
