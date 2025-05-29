@@ -17,14 +17,13 @@ dynamic = [
 description = "An asynchronous networking framework written in Python"
 license = { text = "MIT License" }
 # When updating this value, make sure our CI matrix includes a matching minimum version.
-requires-python = ">=3.8.0"
+requires-python = ">=3.9.0"
 authors = [
     { name = "Twisted Matrix Community", email = "twisted@python.org" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -283,7 +282,7 @@ include = [
         showcontent = false
 
 [tool.black]
-target-version = ['py36', 'py37', 'py38']
+target-version = ['py39', 'py310', 'py311', 'py312', 'py313']
 
 [tool.isort]
 profile = "black"
