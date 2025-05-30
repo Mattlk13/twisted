@@ -127,7 +127,7 @@ osx-platform = [
 
 gtk-platform = [
     "twisted[all-non-platform]",
-    "pygobject < 3.52.1",
+    "pygobject < 3.52.1; python_version < '3.10'",
 ]
 
 mypy = [
