@@ -113,7 +113,7 @@ jobs:
           # by GitHub. The availability of the Python version
           # depends on the version of Ubuntu in use. 
           # See https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
-          - python-version: '3.9.0'
+          - python-version: '3.9'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
             runs-on: 'ubuntu-22.04'
