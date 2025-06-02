@@ -17,7 +17,7 @@ dynamic = [
 description = "An asynchronous networking framework written in Python"
 license = { text = "MIT License" }
 # When updating this value, make sure our CI matrix includes a matching minimum version.
-requires-python = ">=3.9.0"
+requires-python = ">=3.9.12"
 authors = [
     { name = "Twisted Matrix Community", email = "twisted@python.org" },
 ]
