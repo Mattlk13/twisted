@@ -318,9 +318,7 @@ class ProcessMonitor(service.Service):
         for name in list(self._processes):
             self.stopProcess(name)
 
-    @deprecate.deprecatedProperty(
-        incremental.Version("Twisted", 25, 5, 0, release_candidate=1)
-    )
+    @deprecate.deprecatedProperty(incremental.Version("Twisted", 25, 5, 0))
     def connectionLost(self, name: str) -> None:
         """
         Called when a monitored processes exits.  If

@@ -8,8 +8,13 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
-Twisted 25.5.0rc1 (2025-05-09)
-==============================
+
+Twisted 25.5.0 (2025-06-07)
+===========================
+
+This is the last release with support for Python 3.8.
+No changes since 25.5.0.rc1.
+
 
 Bugfixes
 --------
