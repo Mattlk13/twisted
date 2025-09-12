@@ -13,6 +13,7 @@ from typing import Optional
 from zope.interface import implementer
 
 from twisted.conch.error import ConchError, ValidPublicKey
+from twisted.conch.test.sk_dummy import DummySK, SKAlgorithm
 from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IAnonymous, ISSHPrivateKey, IUsernamePassword
 from twisted.cred.error import UnauthorizedLogin
@@ -27,7 +28,7 @@ keys: Optional[ModuleType] = None
 if requireModule("cryptography"):
     from twisted.conch.checkers import SSHProtocolChecker
     from twisted.conch.ssh import keys, transport, userauth
-    from twisted.conch.ssh.common import NS
+    from twisted.conch.ssh.common import MP, NS
     from twisted.conch.test import keydata
 else:
 
@@ -207,11 +208,27 @@ class PrivateKeyChecker:
     credentialInterfaces = (ISSHPrivateKey,)
 
     def requestAvatarId(self, creds):
-        if creds.blob == keys.Key.fromString(keydata.publicRSA_openssh).blob():
+        # Accept both RSA and Security Key public keys for testing
+        validBlobs = [
+            keys.Key.fromString(keydata.publicRSA_openssh).blob(),
+        ]
+
+        if creds.blob in validBlobs:
             if creds.signature is not None:
                 obj = keys.Key.fromString(creds.blob)
                 if obj.verify(creds.signature, creds.sigData):
                     return creds.username
+            else:
+                raise ValidPublicKey()
+        # blobs are generated randomly using SKDummy
+        elif creds.algName.startswith(b"sk-"):
+            if creds.signature is not None:
+                obj = keys.Key.fromString(creds.blob)
+                obj._sk = True
+                if obj.verify(creds.signature, creds.sigData):
+                    return creds.username
+                else:
+                    raise UnauthorizedLogin()
             else:
                 raise ValidPublicKey()
         raise UnauthorizedLogin()
@@ -386,6 +403,173 @@ class SSHUserAuthServerTests(unittest.TestCase):
             self.assertEqual(
                 self.authServer.transport.packets,
                 [(userauth.MSG_USERAUTH_PK_OK, NS(b"ssh-rsa") + NS(blob))],
+            )
+
+        return d.addCallback(check)
+
+    def test_verifyValidPrivateKey_sk_ed25519(self):
+        """
+        Test that verifying a valid sk-ssh-ed25519 public key works.
+        """
+        sk = DummySK()
+        application_name = "test-application"
+        enroll = sk.enroll(
+            SKAlgorithm.ED25519,
+            challenge=b"dummy-challenge",
+            application=application_name,
+            flags=0x01,  # user presence
+        )
+
+        alg_name = b"sk-ssh-ed25519@openssh.com"
+
+        # string alg-name
+        # string raw-public-key
+        # string application ("ssh:")
+        pubkey_blob = NS(alg_name) + NS(enroll.public_key) + NS(b"ssh:")
+
+        packet = (
+            NS(b"foo")
+            + NS(b"none")
+            + NS(b"publickey")
+            + b"\x00"
+            + NS(alg_name)
+            + NS(pubkey_blob)
+        )
+
+        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+
+        def check(ignored):
+            self.assertEqual(
+                self.authServer.transport.packets,
+                [(userauth.MSG_USERAUTH_PK_OK, NS(alg_name) + NS(pubkey_blob))],
+            )
+
+        return d.addCallback(check)
+
+    def test_successfulPrivateKeyAuthentication_sk_ed25519(self):
+        """
+        Test that sk-ssh-ed25519 private key authentication completes successfully.
+        """
+        sk = DummySK()
+        enroll = sk.enroll(
+            SKAlgorithm.ED25519,
+            challenge=b"dummy-challenge",
+            application="ssh:",
+            flags=0x01,  # user presence
+        )
+
+        alg_name = b"sk-ssh-ed25519@openssh.com"
+
+        pubkey_blob = NS(alg_name) + NS(enroll.public_key) + NS(b"ssh:")
+
+        packet = (
+            NS(b"foo")
+            + NS(b"none")
+            + NS(b"publickey")
+            + b"\xff"
+            + NS(alg_name)
+            + NS(pubkey_blob)
+        )
+
+        self.authServer.transport.sessionID = b"test"
+
+        data_to_sign = NS(b"test") + bytes((userauth.MSG_USERAUTH_REQUEST,)) + packet
+
+        sign_resp = sk.sign(
+            SKAlgorithm.ED25519,
+            data=data_to_sign,
+            application="ssh:",
+            key_handle=enroll.key_handle,
+            flags=enroll.flags,
+        )
+
+        # string alg-name
+        # string raw Ed25519 signature
+        # byte flags
+        # uint32 counter
+        signature_blob = (
+            NS(alg_name)
+            + NS(sign_resp.signature_r)
+            + sign_resp.flags.to_bytes(1, "big")
+            + sign_resp.counter.to_bytes(4, "big")
+        )
+
+        packet += NS(signature_blob)
+
+        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+
+        def check(ignored):
+            self.assertEqual(
+                self.authServer.transport.packets,
+                [(userauth.MSG_USERAUTH_SUCCESS, b"")],
+            )
+
+        return d.addCallback(check)
+
+    def test_successfulPrivateKeyAuthentication_sk_ecdsa(self):
+        """
+        Test that sk-ecdsa-sha2-nistp256 private key authentication completes successfully.
+        """
+        sk = DummySK()
+        application = "test-application"
+        enroll = sk.enroll(
+            SKAlgorithm.ECDSA,
+            challenge=b"dummy-challenge",
+            application=application,
+            flags=0x01,  # user presence
+        )
+
+        alg_name = b"sk-ecdsa-sha2-nistp256@openssh.com"
+
+        pubkey_blob = (
+            NS(alg_name) + NS(b"nistp256") + NS(enroll.public_key) + NS(application)
+        )
+
+        packet = (
+            NS(b"foo")
+            + NS(b"none")
+            + NS(b"publickey")
+            + b"\xff"
+            + NS(alg_name)
+            + NS(pubkey_blob)
+        )
+
+        self.authServer.transport.sessionID = b"test"
+
+        data_to_sign = NS(b"test") + bytes((userauth.MSG_USERAUTH_REQUEST,)) + packet
+
+        sign_resp = sk.sign(
+            SKAlgorithm.ECDSA,
+            data=data_to_sign,
+            application=application,
+            key_handle=enroll.key_handle,
+            flags=enroll.flags,
+        )
+
+        r_int = int.from_bytes(sign_resp.signature_r, "big")
+        s_int = int.from_bytes(sign_resp.signature_s, "big")
+
+        # string alg-name
+        # string ecdsa_signature (mpint r, mpint s)
+        # byte flags
+        # uint32 counter
+        ecdsa_signature = MP(r_int) + MP(s_int)
+
+        signature_blob = (
+            NS(alg_name)
+            + NS(ecdsa_signature)
+            + sign_resp.flags.to_bytes(1, "big")
+            + sign_resp.counter.to_bytes(4, "big")
+        )
+
+        packet += NS(signature_blob)
+
+        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+
+        def check(ignored):
+            self.assertEqual(
+                self.authServer.transport.packets,
+                [(userauth.MSG_USERAUTH_SUCCESS, b"")],
             )
 
         return d.addCallback(check)

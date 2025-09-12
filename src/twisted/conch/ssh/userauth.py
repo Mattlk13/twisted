@@ -11,6 +11,7 @@ Maintainer: Paul Swartz
 from __future__ import annotations
 
 import struct
+from hashlib import sha256
 from typing import Callable, Tuple, Type
 
 from twisted.conch import error, interfaces
@@ -277,7 +278,7 @@ class SSHUserAuthServer(service.SSHService):
 
         result: Deferred[_ConchPortalTuple]
         try:
-            keys.Key.fromString(blob)
+            pubKey = keys.Key.fromString(blob)
         except keys.BadKeyError:
             error = "Unsupported key type {} or bad key".format(algName.decode("ascii"))
             self._log.error(error)
@@ -287,7 +288,7 @@ class SSHUserAuthServer(service.SSHService):
         if hasSig:
             assert self.transport is not None, "must have transport for auth"
             assert self.transport.sessionID is not None, "must have session for auth"
-            b = (
+            originalSignedData = (
                 NS(self.transport.sessionID)
                 + bytes((MSG_USERAUTH_REQUEST,))
                 + NS(self.user)
@@ -297,7 +298,14 @@ class SSHUserAuthServer(service.SSHService):
                 + NS(algName)
                 + NS(blob)
             )
-            c = credentials.SSHPrivateKey(self.user, algName, blob, b, signature)
+            if self._isSecurityKey(pubKey):
+                application = self._extractApplicationFromKey(pubKey, blob)
+                originalSignedData = self._wrapSecurityKeySignedData(
+                    signature, originalSignedData, application
+                )
+            c = credentials.SSHPrivateKey(
+                self.user, algName, blob, originalSignedData, signature
+            )
             result = self.portal.login(c, None, interfaces.IConchUser)
         else:
             c = credentials.SSHPrivateKey(self.user, algName, blob, None, None)
@@ -305,6 +313,45 @@ class SSHUserAuthServer(service.SSHService):
                 self._ebCheckKey, packet[1:]
             )
         return result
+
+    def _isSecurityKey(self, pubKey):
+        """
+        Return True if pubKey is an OpenSSH security key.
+        """
+        return pubKey.sshType() in [
+            b"sk-ecdsa-sha2-nistp256@openssh.com",
+            b"sk-ssh-ed25519@openssh.com",
+        ]
+
+    def _wrapSecurityKeySignedData(self, signature, originalSignedData, application):
+        _, _, trailing = getNS(signature, 2)
+        if len(trailing) < 5:
+            raise ValueError("SK signature missing flags+counter")
+        flags = trailing[0:1]
+        counter = trailing[1:5]
+
+        if flags[0] & 0x04:
+            raise ValueError("unsupported SK extensions present")
+
+        return (
+            sha256(application).digest()
+            + flags
+            + counter
+            + sha256(originalSignedData).digest()
+        )
+
+    def _extractApplicationFromKey(self, pubKey, blob):
+        """
+        Try to extract the application string from a security key blob.
+        Returns None if no application string can be found.
+        """
+        if pubKey.sshType() == b"sk-ssh-ed25519@openssh.com":
+            _, _, application, _ = getNS(blob, 3)
+            return application
+        if pubKey.sshType() == b"sk-ecdsa-sha2-nistp256@openssh.com":
+            _, _, _, application, _ = getNS(blob, 4)
+            return application
+        return b"ssh:"
 
     def _ebCheckKey(self, reason: failure.Failure, packet: bytes) -> failure.Failure:
         """
