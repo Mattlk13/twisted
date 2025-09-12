@@ -300,7 +300,7 @@ class SSHUserAuthServer(service.SSHService):
             )
             if pubKey.isSecurityKey():
                 try:
-                    application = self._extractApplicationFromKey(pubKey, blob)
+                    application = pubKey.application()
                     originalSignedData = self._wrapSecurityKeySignedData(
                         signature, originalSignedData, application
                     )
@@ -320,7 +320,8 @@ class SSHUserAuthServer(service.SSHService):
             )
         return result
 
-    def _wrapSecurityKeySignedData(self, signature, originalSignedData, application):
+    @staticmethod
+    def _wrapSecurityKeySignedData(signature, originalSignedData, application):
         _, _, trailing = getNS(signature, 2)
         if len(trailing) < 5:
             raise ValueError("SK signature missing flags+counter")
@@ -333,18 +334,6 @@ class SSHUserAuthServer(service.SSHService):
             + counter
             + sha256(originalSignedData).digest()
         )
-
-    def _extractApplicationFromKey(self, pubKey, blob):
-        """
-        Try to extract the application string from a security key blob.
-        Defaults to "ssh:" if no application string can be found.
-        """
-        if pubKey.sshType() == b"sk-ssh-ed25519@openssh.com":
-            _, _, application, _ = getNS(blob, 3)
-            return application
-        # The only other supported sk key type is "sk-ecdsa-sha2-nistp256@openssh.com"
-        _, _, _, application, _ = getNS(blob, 4)
-        return application
 
     def _ebCheckKey(self, reason: failure.Failure, packet: bytes) -> failure.Failure:
         """

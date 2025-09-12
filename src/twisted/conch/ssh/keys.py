@@ -277,6 +277,7 @@ class Key:
                 curve=b"ecdsa-sha2-nistp256",
             )
             keyObject._sk = True
+            keyObject._application = common.getNS(rest, 3)[2]
             return keyObject
 
         if keyType in [b"ssh-ed25519", b"sk-ssh-ed25519@openssh.com"]:
@@ -284,6 +285,8 @@ class Key:
             keyObject = cls._fromEd25519Components(a)
             if keyType.startswith(b"sk-ssh-"):
                 keyObject._sk = True
+                keyObject._application = common.getNS(rest)[0]
+
             return keyObject
 
         raise BadKeyError(f"unknown blob type: {keyType}")
@@ -903,7 +906,9 @@ class Key:
         @type keyObject: C{cryptography.hazmat.primitives.asymmetric} key.
         """
         self._keyObject = keyObject
+        # Only used for OpenSSH sk ssh keys
         self._sk = False
+        self._application = None
 
     def __eq__(self, other: object) -> bool:
         """
@@ -1262,8 +1267,8 @@ class Key:
             )
         elif type == "EC":
             byteLength = (self._keyObject.curve.key_size + 7) // 8
-            return (
-                common.NS(data["curve"])
+            blob = (
+                common.NS(self.sshType())
                 + common.NS(data["curve"][-8:])
                 + common.NS(
                     b"\x04"
@@ -1271,8 +1276,14 @@ class Key:
                     + utils.int_to_bytes(data["y"], byteLength)
                 )
             )
+            if self._sk:
+                blob += common.NS(self._application)
+            return blob
         elif type == "Ed25519":
-            return common.NS(b"ssh-ed25519") + common.NS(data["a"])
+            blob = common.NS(self.sshType()) + common.NS(data["a"])
+            if self._sk:
+                blob += common.NS(self._application)
+            return blob
         else:
             raise BadKeyError(f"unknown key type: {type}")
 
@@ -1817,6 +1828,13 @@ class Key:
             b"sk-ecdsa-sha2-nistp256@openssh.com",
             b"sk-ssh-ed25519@openssh.com",
         ]
+
+    def application(self):
+        """
+        Returns the application value for OpenSSH sk SSH keys
+        and None for other key types.
+        """
+        return self._application
 
 
 def _getPersistentRSAKey(location, keySize=4096):
