@@ -298,7 +298,7 @@ class SSHUserAuthServer(service.SSHService):
                 + NS(algName)
                 + NS(blob)
             )
-            if self._isSecurityKey(pubKey):
+            if pubKey.isSecurityKey():
                 try:
                     application = self._extractApplicationFromKey(pubKey, blob)
                     originalSignedData = self._wrapSecurityKeySignedData(
@@ -319,15 +319,6 @@ class SSHUserAuthServer(service.SSHService):
                 self._ebCheckKey, packet[1:]
             )
         return result
-
-    def _isSecurityKey(self, pubKey):
-        """
-        Return True if pubKey is an OpenSSH security key.
-        """
-        return pubKey.sshType() in [
-            b"sk-ecdsa-sha2-nistp256@openssh.com",
-            b"sk-ssh-ed25519@openssh.com",
-        ]
 
     def _wrapSecurityKeySignedData(self, signature, originalSignedData, application):
         _, _, trailing = getNS(signature, 2)
@@ -351,9 +342,9 @@ class SSHUserAuthServer(service.SSHService):
         if pubKey.sshType() == b"sk-ssh-ed25519@openssh.com":
             _, _, application, _ = getNS(blob, 3)
             return application
-        if pubKey.sshType() == b"sk-ecdsa-sha2-nistp256@openssh.com":
-            _, _, _, application, _ = getNS(blob, 4)
-            return application
+        # The only other supported sk key type is "sk-ecdsa-sha2-nistp256@openssh.com"
+        _, _, _, application, _ = getNS(blob, 4)
+        return application
 
     def _ebCheckKey(self, reason: failure.Failure, packet: bytes) -> failure.Failure:
         """

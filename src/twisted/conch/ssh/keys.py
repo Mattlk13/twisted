@@ -1809,6 +1809,15 @@ class Key:
         else:
             return True
 
+    def isSecurityKey(self):
+        """
+        Return True if key is an OpenSSH security key.
+        """
+        return self.sshType() in [
+            b"sk-ecdsa-sha2-nistp256@openssh.com",
+            b"sk-ssh-ed25519@openssh.com",
+        ]
+
 
 def _getPersistentRSAKey(location, keySize=4096):
     """
