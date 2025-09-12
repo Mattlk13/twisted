@@ -343,7 +343,7 @@ class SSHUserAuthServer(service.SSHService):
     def _extractApplicationFromKey(self, pubKey, blob):
         """
         Try to extract the application string from a security key blob.
-        Returns None if no application string can be found.
+        Defaults to "ssh:" if no application string can be found.
         """
         if pubKey.sshType() == b"sk-ssh-ed25519@openssh.com":
             _, _, application, _ = getNS(blob, 3)
