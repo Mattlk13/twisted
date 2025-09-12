@@ -227,8 +227,6 @@ class PrivateKeyChecker:
                 obj._sk = True
                 if obj.verify(creds.signature, creds.sigData):
                     return creds.username
-                else:
-                    raise UnauthorizedLogin()
             else:
                 raise ValidPublicKey()
         raise UnauthorizedLogin()
@@ -573,6 +571,104 @@ class SSHUserAuthServerTests(unittest.TestCase):
             )
 
         return d.addCallback(check)
+
+    def test_skPrivateKeyMissingTrailer(self):
+        """
+        Test that public keys without flags and counter are rejected.
+        """
+        sk = DummySK()
+        enroll = sk.enroll(
+            SKAlgorithm.ED25519,
+            challenge=b"dummy-challenge",
+            application="ssh:",
+            flags=0x01,  # user presence
+        )
+
+        alg_name = b"sk-ssh-ed25519@openssh.com"
+
+        pubkey_blob = NS(alg_name) + NS(enroll.public_key) + NS(b"ssh:")
+
+        packet = (
+            NS(b"foo")
+            + NS(b"none")
+            + NS(b"publickey")
+            + b"\xff"
+            + NS(alg_name)
+            + NS(pubkey_blob)
+        )
+
+        self.authServer.transport.sessionID = b"test"
+
+        data_to_sign = NS(b"test") + bytes((userauth.MSG_USERAUTH_REQUEST,)) + packet
+
+        sign_resp = sk.sign(
+            SKAlgorithm.ED25519,
+            data=data_to_sign,
+            application="ssh:",
+            key_handle=enroll.key_handle,
+            flags=enroll.flags,
+        )
+
+        # string alg-name
+        # string raw Ed25519 signature
+        # byte flags
+        # uint32 counter
+        signature_blob = NS(alg_name) + NS(sign_resp.signature_r)
+
+        packet += NS(signature_blob)
+
+        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+
+        return d.addCallback(self._checkFailed)
+
+    def test_failedskPrivateKeyAuthentication(self):
+        """
+        Test that sk-ssh-ed25519 private key authentication with a different application during the sign operation fails.
+        """
+        sk = DummySK()
+        enroll = sk.enroll(
+            SKAlgorithm.ED25519,
+            challenge=b"dummy-challenge",
+            application="ssh:",
+            flags=0x01,  # user presence
+        )
+
+        alg_name = b"sk-ssh-ed25519@openssh.com"
+
+        pubkey_blob = NS(alg_name) + NS(enroll.public_key) + NS(b"ssh:")
+
+        packet = (
+            NS(b"foo")
+            + NS(b"none")
+            + NS(b"publickey")
+            + b"\xff"
+            + NS(alg_name)
+            + NS(pubkey_blob)
+        )
+
+        self.authServer.transport.sessionID = b"test"
+
+        data_to_sign = NS(b"test") + bytes((userauth.MSG_USERAUTH_REQUEST,)) + packet
+
+        sign_resp = sk.sign(
+            SKAlgorithm.ED25519,
+            data=data_to_sign,
+            application="wrong-application",
+            key_handle=enroll.key_handle,
+            flags=enroll.flags,
+        )
+
+        # string alg-name
+        # string raw Ed25519 signature
+        # byte flags
+        # uint32 counter
+        signature_blob = NS(alg_name) + NS(sign_resp.signature_r)
+
+        packet += NS(signature_blob)
+
+        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+
+        return d.addCallback(self._checkFailed)
 
     def test_failedPrivateKeyAuthenticationWithoutSignature(self):
         """

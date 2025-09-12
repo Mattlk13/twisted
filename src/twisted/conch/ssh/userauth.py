@@ -299,10 +299,16 @@ class SSHUserAuthServer(service.SSHService):
                 + NS(blob)
             )
             if self._isSecurityKey(pubKey):
-                application = self._extractApplicationFromKey(pubKey, blob)
-                originalSignedData = self._wrapSecurityKeySignedData(
-                    signature, originalSignedData, application
-                )
+                try:
+                    application = self._extractApplicationFromKey(pubKey, blob)
+                    originalSignedData = self._wrapSecurityKeySignedData(
+                        signature, originalSignedData, application
+                    )
+                except ValueError:
+                    error = "Invalid security key format"
+                    self._log.error(error)
+                    return defer.fail(UnauthorizedLogin(error))
+
             c = credentials.SSHPrivateKey(
                 self.user, algName, blob, originalSignedData, signature
             )
@@ -330,9 +336,6 @@ class SSHUserAuthServer(service.SSHService):
         flags = trailing[0:1]
         counter = trailing[1:5]
 
-        if flags[0] & 0x04:
-            raise ValueError("unsupported SK extensions present")
-
         return (
             sha256(application).digest()
             + flags
@@ -351,7 +354,6 @@ class SSHUserAuthServer(service.SSHService):
         if pubKey.sshType() == b"sk-ecdsa-sha2-nistp256@openssh.com":
             _, _, _, application, _ = getNS(blob, 4)
             return application
-        return b"ssh:"
 
     def _ebCheckKey(self, reason: failure.Failure, packet: bytes) -> failure.Failure:
         """

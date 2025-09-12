@@ -1,9 +1,15 @@
 import hashlib
 from dataclasses import dataclass
 from enum import Enum
+from typing import Optional
 
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, ed25519, utils
+from twisted.python.reflect import requireModule
+
+cryptography = requireModule("cryptography")
+
+if cryptography:
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec, ed25519, utils
 
 
 class SKAlgorithm(Enum):
@@ -20,7 +26,7 @@ class EnrollResponse:
     public_key: bytes
     key_handle: bytes
     signature: bytes
-    attestation_cert: bytes | None = None
+    attestation_cert: Optional[bytes] = None
     flags: int = 0
 
 
@@ -31,7 +37,7 @@ class SignResponse:
     flags: int
     counter: int
     signature_r: bytes
-    signature_s: bytes | None  # None for Ed25519 algorithm
+    signature_s: Optional[bytes]  # None for Ed25519 algorithm
 
 
 class SKError(Exception):
@@ -57,7 +63,7 @@ class DummySK:
         challenge: bytes,
         application: str,
         flags: int,
-        pin: str | None = None,
+        pin: Optional[str] = None,
     ) -> EnrollResponse:
         """
         Simulates the enrollment of a new security key credential.
@@ -74,33 +80,31 @@ class DummySK:
             The key_handle is the insecurely stored private key.
         """
         if alg == SKAlgorithm.ECDSA:
-            private_key = ec.generate_private_key(ec.SECP256R1())
+            ec_private_key = ec.generate_private_key(ec.SECP256R1())
 
-            public_key = private_key.public_key().public_bytes(
+            public_key = ec_private_key.public_key().public_bytes(
                 encoding=serialization.Encoding.X962,
                 format=serialization.PublicFormat.UncompressedPoint,
             )
 
-            key_handle = private_key.private_bytes(
+            key_handle = ec_private_key.private_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PrivateFormat.PKCS8,
                 encryption_algorithm=serialization.NoEncryption(),
             )
         elif alg == SKAlgorithm.ED25519:
-            private_key = ed25519.Ed25519PrivateKey.generate()
+            ed_private_key = ed25519.Ed25519PrivateKey.generate()
 
-            public_key = private_key.public_key().public_bytes(
+            public_key = ed_private_key.public_key().public_bytes(
                 encoding=serialization.Encoding.Raw,
                 format=serialization.PublicFormat.Raw,
             )
 
-            key_handle = private_key.private_bytes(
+            key_handle = ed_private_key.private_bytes(
                 encoding=serialization.Encoding.Raw,
                 format=serialization.PrivateFormat.Raw,
                 encryption_algorithm=serialization.NoEncryption(),
             )
-        else:
-            raise SKError(f"Unsupported algorithm: {alg}")
 
         return EnrollResponse(
             public_key=public_key,
@@ -116,7 +120,7 @@ class DummySK:
         application: str,
         key_handle: bytes,
         flags: int,
-        pin: str | None = None,
+        pin: Optional[str] = None,
     ) -> SignResponse:
         """
         Simulates signing data with a previously enrolled key.
@@ -145,14 +149,8 @@ class DummySK:
         )
 
         if alg == SKAlgorithm.ECDSA:
-            try:
-                private_key = serialization.load_pem_private_key(
-                    key_handle, password=None
-                )
-                if not isinstance(private_key, ec.EllipticCurvePrivateKey):
-                    raise SKError("Key handle is not a valid ECDSA private key.")
-            except ValueError:
-                raise SKError("Failed to decode ECDSA key handle.")
+            private_key = serialization.load_pem_private_key(key_handle, password=None)
+            assert isinstance(private_key, ec.EllipticCurvePrivateKey)
 
             der_signature = private_key.sign(payload_to_sign, ec.ECDSA(hashes.SHA256()))
 
@@ -167,16 +165,10 @@ class DummySK:
             )
 
         elif alg == SKAlgorithm.ED25519:
-            try:
-                private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_handle)
-            except ValueError:
-                raise SKError("Invalid Ed25519 key handle length.")
+            private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_handle)
 
             signature = private_key.sign(payload_to_sign)
 
             return SignResponse(
                 flags=flags, counter=counter, signature_r=signature, signature_s=None
             )
-
-        else:
-            raise SKError(f"Unsupported algorithm: {alg}")
