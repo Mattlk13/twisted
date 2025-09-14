@@ -1126,7 +1126,6 @@ class ClientTLSOptions:
             self._hostnameIsDnsName = True
 
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
-        ctx.set_info_callback(_tolerateErrors(self._identityVerifyingInfoCallback))
 
     def clientConnectionForTLS(self, tlsProtocol):
         """
@@ -1147,6 +1146,9 @@ class ClientTLSOptions:
         context = self._ctx
         connection = SSL.Connection(context, None)
         connection.set_app_data(tlsProtocol)
+        connection.set_info_callback(
+            _tolerateErrors(self._identityVerifyingInfoCallback)
+        )
         return connection
 
     def _identityVerifyingInfoCallback(self, connection, where, ret):
