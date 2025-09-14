@@ -1361,8 +1361,8 @@ class Key:
 
     @_mutuallyExclusiveArguments(
         [
-            ["extra", "comment"],
-            ["extra", "passphrase"],
+            ("extra", "comment"),
+            ("extra", "passphrase"),
         ]
     )
     def toString(self, type, extra=None, subtype=None, comment=None, passphrase=None):

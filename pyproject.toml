@@ -77,7 +77,8 @@ dev = [
 ]
 
 tls = [
-    "pyopenssl >= 25.2.0",
+    "pyOpenSSL @ git+https://github.com/pyca/pyopenssl.git@alex-patch-1",
+    # "pyopenssl >= 25.2.0",
     # service_identity 18.1.0 added support for validating IP addresses in
     # certificate subjectAltNames
     "service_identity >= 18.1.0",
@@ -85,7 +86,7 @@ tls = [
 ]
 
 conch = [
-    "cryptography >= 3.3",
+    "cryptography >= 38",
     "appdirs >= 1.4.0",
     "bcrypt >= 3.2.1",
 ]

@@ -42,6 +42,7 @@ from twisted.internet.interfaces import (
     IHostResolution,
     IListeningPort,
     IProtocol,
+    IProtocolFactory,
     IPushProducer,
     IReactorCore,
     IReactorFDSet,
@@ -53,6 +54,7 @@ from twisted.internet.interfaces import (
     IResolutionReceiver,
     ITransport,
 )
+from twisted.internet.protocol import ClientFactory
 from twisted.internet.task import Clock
 from twisted.logger import ILogObserver, LogEvent, LogPublisher
 from twisted.protocols import basic
@@ -539,6 +541,8 @@ class MemoryReactor:
     """
 
     nameResolver: IHostnameResolver
+    tcpServers: list[tuple[int, IProtocolFactory, int, str]]
+    tcpClients: list[tuple[str, int, ClientFactory, int, str | None]]
 
     def __init__(self):
         """

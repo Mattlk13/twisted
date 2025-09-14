@@ -1401,7 +1401,9 @@ class TCP4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
             address,
         )
 
-    def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
+    def createClientEndpoint(
+        self, reactor: IReactorTCP, clientFactory: IProtocolFactory, **connectArgs: Any
+    ) -> tuple[IStreamClientEndpoint, tuple[object, ...], IAddress]:
         """
         Create an L{TCP4ClientEndpoint} and return the values needed to verify
         its behavior.
