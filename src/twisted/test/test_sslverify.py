@@ -2134,6 +2134,7 @@ class ServiceIdentityTests(SynchronousTestCase):
         serverVerifies=False,
         fakePlatformTrust=False,
         useDefaultTrust=False,
+        clientSkipSNI=False,
         immediately=True,
     ):
         """
@@ -2220,6 +2221,8 @@ class ServiceIdentityTests(SynchronousTestCase):
             signature.update(trustRoot=serverCA)
         if fakePlatformTrust:
             self.patch(sslverify, "platformTrust", lambda: serverCA)
+        if clientSkipSNI:
+            signature.update(sendServerName=False)
 
         clientOpts = sslverify.optionsForClientTLS(**signature)
 
@@ -2313,7 +2316,10 @@ class ServiceIdentityTests(SynchronousTestCase):
         in response to the server name indication being sent.
         """
 
+        servers = []
+
         def switchToCorrect(servername: bytes | None) -> SSL.Context:
+            servers.append(servername)
             options: sslverify.OpenSSLCertificateOptions = validCert.options()
             return options.getContext()
 
@@ -2328,6 +2334,7 @@ class ServiceIdentityTests(SynchronousTestCase):
         )
         cProto, sProto, cWrapped, sWrapped, pump = conf
         pump.flush()
+        self.assertEqual(servers, [b"correct-host.example.com"])
         self.assertEqual(cWrapped.data, b"greetings!")
 
         cErr = cWrapped.lostReason
@@ -2361,6 +2368,28 @@ class ServiceIdentityTests(SynchronousTestCase):
 
         self.assertIsInstance(cErr, ConnectionLost)
         self.assertIsInstance(sErr, ConnectionLost)
+
+    def test_noSNICallback(self) -> None:
+        """
+        When SNI is not sent by the client, the server name callback will not
+        be invoked on the server.
+        """
+        sent = []
+        conf = self.serviceIdentitySetup(
+            "correct-host.example.com",
+            "correct-host.example.com",
+            serverNameCallback=sent.append,
+            immediately=False,
+            clientSkipSNI=True,
+        )
+        cProto, sProto, cWrapped, sWrapped, pump = conf
+        pump.flush()
+        self.assertEqual(cWrapped.data, b"greetings!")
+        cErr = cWrapped.lostReason
+        sErr = sWrapped.lostReason
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
+        self.assertEqual(sent, [])
 
     def test_validHostname(self):
         """
