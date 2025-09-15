@@ -2165,7 +2165,7 @@ class ServiceIdentityTests(SynchronousTestCase):
         serverOpts = sslverify.OpenSSLCertificateOptions(
             privateKey=serverCert.privateKey.original,
             certificate=serverCert.original,
-            callbackForServerName=serverNameCallback,
+            contextForServerName=serverNameCallback,
             **other,
         )
         if not validCertificate:

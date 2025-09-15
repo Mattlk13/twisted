@@ -1265,7 +1265,7 @@ class OpenSSLCertificateOptions:
         raiseMinimumTo: NamedConstant | None = None,
         insecurelyLowerMinimumTo: NamedConstant | None = None,
         lowerMaximumSecurityTo: NamedConstant | None = None,
-        callbackForServerName: (
+        contextForServerName: (
             Callable[[bytes | None], SSL.Context | None] | None
         ) = None,
     ) -> None:
@@ -1394,7 +1394,7 @@ class OpenSSLCertificateOptions:
             unless you are absolutely sure this is what you want.
         @type lowerMaximumSecurityTo: L{TLSVersion} constant
 
-        @param callbackForServerName: A callback to invoke with the server-name
+        @param contextForServerName: A callback to invoke with the server-name
             indication field in the client handshake, which returns the other
             context to switch to.
 
@@ -1552,7 +1552,7 @@ class OpenSSLCertificateOptions:
             trustRoot = IOpenSSLTrustRoot(trustRoot)
         self.trustRoot: IOpenSSLTrustRoot | None = trustRoot
         self._acceptableProtocols = acceptableProtocols
-        self._callbackForServerName = callbackForServerName
+        self._contextForServerName = contextForServerName
 
     def __getstate__(self):
         d = self.__dict__.copy()
@@ -1662,9 +1662,9 @@ class OpenSSLCertificateOptions:
             ctx.load_tmp_dh(self.dhParameters._dhFile.path)
 
         self._ecChooser.configureECDHCurve(ctx)
-        if self._callbackForServerName is not None:
+        if self._contextForServerName is not None:
             ctx.set_tlsext_servername_callback(
-                contextFactoryToServernameCallback(self._callbackForServerName)
+                contextFactoryToServernameCallback(self._contextForServerName)
             )
         setupForALPN(ctx, self._acceptableProtocols or ())
         if not skipCiphers:
