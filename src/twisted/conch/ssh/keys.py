@@ -244,6 +244,19 @@ class Key:
             string 'ssh-ed25519'
             string a
 
+        The format of a sk-ecdsa-sha2-nistp256@openssh.com public key is:
+
+            string		"sk-ecdsa-sha2-nistp256@openssh.com"
+            string		curve name
+            ec_point	Q
+            string		application (user-specified, but typically "ssh:")
+
+        The format of a sk-ssh-ed25519@openssh.com public key is:
+
+            string		"sk-ssh-ed25519@openssh.com"
+            string		public key
+            string		application (user-specified, but typically "ssh:")
+
         @type blob: L{bytes}
         @param blob: The key data.
 
@@ -272,12 +285,21 @@ class Key:
             )
 
         if keyType == b"sk-ecdsa-sha2-nistp256@openssh.com":
+            _, encodedPoint, application, rest = common.getNS(rest, 3)
             keyObject = cls._fromECEncodedPoint(
-                encodedPoint=common.getNS(rest, 2)[1],
+                encodedPoint=encodedPoint,
                 curve=b"ecdsa-sha2-nistp256",
             )
             keyObject._sk = True
-            keyObject.application = common.getNS(rest, 3)[2]
+            keyObject.application = application
+            return keyObject
+
+        if keyType == b"sk-ssh-ed25519@openssh.com":
+            a, application, rest = common.getNS(rest, 2)
+            keyObject = cls._fromEd25519Components(a)
+            keyObject._sk = True
+            keyObject.application = application
+
             return keyObject
 
         if keyType in [b"ssh-ed25519", b"sk-ssh-ed25519@openssh.com"]:

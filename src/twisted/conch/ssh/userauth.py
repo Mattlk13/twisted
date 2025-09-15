@@ -305,9 +305,7 @@ class SSHUserAuthServer(service.SSHService):
                         signature, originalSignedData, application
                     )
                 except ValueError:
-                    error = "Invalid security key format"
-                    self._log.error(error)
-                    return defer.fail(UnauthorizedLogin(error))
+                    return defer.fail(UnauthorizedLogin("Invalid security key format"))
 
             c = credentials.SSHPrivateKey(
                 self.user, algName, blob, originalSignedData, signature
@@ -320,6 +318,8 @@ class SSHUserAuthServer(service.SSHService):
             )
         return result
 
+    # Follows the OpenSSH SK signature format specified at
+    # https://github.com/openssh/openssh-portable/blob/a4aa090a3d40dddb07d5ebebc501f6457541a501/PROTOCOL.u2f#L176
     @staticmethod
     def _wrapSecurityKeySignedData(signature, originalSignedData, application):
         _, _, trailing = getNS(signature, 2)
