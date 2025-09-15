@@ -300,7 +300,7 @@ class SSHUserAuthServer(service.SSHService):
             )
             if pubKey.isSecurityKey():
                 try:
-                    application = pubKey.application()
+                    application = pubKey.application
                     originalSignedData = self._wrapSecurityKeySignedData(
                         signature, originalSignedData, application
                     )

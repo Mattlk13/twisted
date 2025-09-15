@@ -27,6 +27,7 @@ if cryptography:
     from cryptography.hazmat.primitives.asymmetric import padding
 
     from twisted.conch.ssh import common, keys, sexpy
+    from twisted.conch.test.sk_dummy import DummySK, SKAlgorithm
 
     ED25519_SUPPORTED = default_backend().ed25519_supported()
 else:
@@ -940,7 +941,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         skEckey = keys.Key.fromString(skEcblob)
         self.assertTrue(skEckey.isPublic())
         self.assertTrue(skEckey._sk)
-        self.assertEqual(skEckey.application(), application)
+        self.assertEqual(skEckey.application, application)
         self.assertEqual(skEcPublicData, skEckey.data())
 
     @skipWithoutEd25519
@@ -978,7 +979,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertTrue(skEd25519Key.isPublic())
         self.assertTrue(skEd25519Key._sk)
-        self.assertEqual(skEd25519Key.application(), application)
+        self.assertEqual(skEd25519Key.application, application)
         self.assertEqual(skEd25519PublicData, skEd25519Key.data())
 
     def test_fromPrivateBlobUnsupportedType(self):
@@ -1144,6 +1145,62 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertEqual(
             keys.Key(self.ed25519Obj).blob(),
             common.NS(b"ssh-ed25519") + common.NS(publicBytes),
+        )
+
+    @skipWithoutEd25519
+    def test_blobSKEd25519(self):
+        """
+        Tests that the correct blob is returned after parse for a sk-ssh-ed25519@openssh.com public key.
+        """
+        sk = DummySK()
+
+        enroll = sk.enroll(
+            SKAlgorithm.ED25519,
+            challenge=b"dummy-challenge",
+            application="ssh:",
+            flags=0x01,  # user presence
+        )
+
+        alg_name = b"sk-ssh-ed25519@openssh.com"
+
+        pubkey_blob = (
+            common.NS(alg_name) + common.NS(enroll.public_key) + common.NS(b"ssh:")
+        )
+
+        self.assertEqual(
+            keys.Key.fromString(pubkey_blob).blob(),
+            common.NS(alg_name) + common.NS(enroll.public_key) + common.NS(b"ssh:"),
+        )
+
+    def test_blobSKECDSA(self):
+        """
+        Tests that the correct blob is returned after parse for a sk-ecdsa-sha2-nistp256@openssh.com public key.
+        """
+
+        sk = DummySK()
+        application = "test-application"
+        enroll = sk.enroll(
+            SKAlgorithm.ECDSA,
+            challenge=b"dummy-challenge",
+            application=application,
+            flags=0x01,  # user presence
+        )
+
+        alg_name = b"sk-ecdsa-sha2-nistp256@openssh.com"
+
+        pubkey_blob = (
+            common.NS(alg_name)
+            + common.NS(b"nistp256")
+            + common.NS(enroll.public_key)
+            + common.NS(application)
+        )
+
+        self.assertEqual(
+            keys.Key.fromString(pubkey_blob).blob(),
+            common.NS(alg_name)
+            + common.NS(b"nistp256")
+            + common.NS(enroll.public_key)
+            + common.NS(application),
         )
 
     def test_blobNoKey(self):
