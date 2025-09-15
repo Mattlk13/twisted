@@ -1581,8 +1581,7 @@ class OpenSSLCertificateOptions:
         """
         Construct an OpenSSL Connection for either client or server.
         """
-        if (ctx := self._context) is None:
-            ctx = self._makeContext()
+        ctx = self.getContext()
         cxn = Connection(ctx)
         if acceptable := protosFromProtocol(protocol, self._acceptableProtocols or ()):
             cxn.set_alpn_protos(acceptable)
