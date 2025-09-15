@@ -111,19 +111,6 @@ def _getExcludedTLSProtocols(oldest, newest):
     return excludedVersions
 
 
-def _usablePyOpenSSL(version):
-    """
-    Check pyOpenSSL version string whether we can use it for host verification.
-
-    @param version: A pyOpenSSL version string.
-    @type version: L{str}
-
-    @rtype: L{bool}
-    """
-    major, minor = (int(part) for part in version.split(".")[:2])
-    return (major, minor) >= (0, 12)
-
-
 class ProtocolNegotiationSupport(Flags):
     """
     L{ProtocolNegotiationSupport} defines flags which are used to indicate the
