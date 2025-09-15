@@ -2641,6 +2641,17 @@ class ALPNTests(TestCase):
         self.assertIs(negotiatedProtocol, None)
         self.assertIs(lostReason, None)
 
+    def test_negotiateNoOverlap(self) -> None:
+        """
+        When negotiating with an empty acceptable protocols list, no protocol
+        is assigned but the connection is not lost.
+        """
+        negotiatedProtocol, lostReason = negotiateProtocol(
+            serverProtocols=[b"server-only"], clientProtocols=[b"client-only"]
+        )
+        self.assertIs(negotiatedProtocol, None)
+        self.assertIsNot(lostReason, None)
+
 
 class _NotSSLTransport:
     def getHandle(self):

@@ -565,7 +565,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         """
         @see: L{INegotiated.negotiatedProtocol}
         """
-        protocolName: bytes | None = self._tlsConnection.get_alpn_proto_negotiated()
+        tc = self._tlsConnection
+        if tc is None:
+            return None
+        protocolName: bytes | None = tc.get_alpn_proto_negotiated()
         if protocolName == b"":
             return None
         return protocolName
