@@ -1682,6 +1682,7 @@ def contextFactoryToServernameCallback(
             newContext = factory(servername)
         except BaseException:
             _log.failure("while looking up SNI context")
+            connection.get_app_data().abortConnection()
         else:
             if newContext is not None:
                 connection.set_context(newContext)

@@ -13,6 +13,7 @@ import gc
 import itertools
 import textwrap
 from dataclasses import dataclass
+from typing import Iterable
 from weakref import ref
 
 from zope.interface import implementer
@@ -25,6 +26,7 @@ from twisted.internet.address import IPv4Address
 from twisted.internet.error import CertificateError, ConnectionClosed, ConnectionLost
 from twisted.internet.interfaces import (
     IOpenSSLContextFactory,
+    IProtocol,
     IProtocolNegotiationFactory,
 )
 from twisted.internet.task import Clock
@@ -188,6 +190,63 @@ class TestingAuthority:
 
         return TestingAuthority(commonNameForCA, caCertificate, privateKeyForCA)
 
+    def serverCertificate(
+        self, commonName: str, subjects: list[str]
+    ) -> sslverify.PrivateCertificate:
+        privateKeyForServer = generate_private_key(
+            public_exponent=65537, key_size=4096, backend=default_backend()
+        )
+        publicKeyForServer = privateKeyForServer.public_key()
+        commonNameForServer = x509.Name(
+            [x509.NameAttribute(NameOID.COMMON_NAME, commonName)]
+        )
+
+        subjectAlternativeNames: list[x509.IPAddress | x509.DNSName] = []
+        for subject in subjects:
+            try:
+                ipAddress = ipaddress.ip_address(subject)
+            except ValueError:
+                subjectAlternativeNames.append(
+                    x509.DNSName(subject.encode("idna").decode("ascii"))
+                )
+            else:
+                subjectAlternativeNames.append(x509.IPAddress(ipAddress))
+
+        serverBuilder = (
+            x509.CertificateBuilder()
+            .subject_name(commonNameForServer)
+            .not_valid_before(datetime.datetime.today() - oneDay)
+            .not_valid_after(datetime.datetime.today() + oneDay)
+            .serial_number(x509.random_serial_number())
+            .public_key(publicKeyForServer)
+            .add_extension(
+                x509.BasicConstraints(ca=False, path_length=None),
+                critical=True,
+            )
+            .add_extension(
+                x509.SubjectAlternativeName(subjectAlternativeNames),
+                critical=True,
+            )
+        )
+        signedX509 = self.authoritize(serverBuilder)
+        serverCert: sslverify.PrivateCertificate = sslverify.PrivateCertificate.loadPEM(
+            b"\n".join(
+                [
+                    privateKeyForServer.private_bytes(
+                        Encoding.PEM,
+                        PrivateFormat.TraditionalOpenSSL,
+                        NoEncryption(),
+                    ),
+                    signedX509.public_bytes(Encoding.PEM),
+                ]
+            )
+        )
+
+        return serverCert
+
+    def authorityCertificate(self) -> sslverify.Certificate:
+        return sslverify.Certificate.loadPEM(self.cert.public_bytes(Encoding.PEM))
+
     def authoritize(self, builder: x509.CertificateBuilder) -> x509.Certificate:
         return builder.issuer_name(self.name).sign(
             private_key=self.key,
@@ -212,58 +271,10 @@ def certificatesForAuthorityAndServer(
         L{sslverify.PrivateCertificate})
     """
     authority = TestingAuthority.create()
-    commonNameForServer = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example Server")]
+    return (
+        authority.authorityCertificate(),
+        authority.serverCertificate("Testing Example Server", [serviceIdentity]),
     )
-    privateKeyForServer = generate_private_key(
-        public_exponent=65537, key_size=4096, backend=default_backend()
-    )
-    publicKeyForServer = privateKeyForServer.public_key()
-    subjectAlternativeNames: list[x509.IPAddress | x509.DNSName]
-
-    try:
-        ipAddress = ipaddress.ip_address(serviceIdentity)
-    except ValueError:
-        subjectAlternativeNames = [
-            x509.DNSName(serviceIdentity.encode("idna").decode("ascii"))
-        ]
-    else:
-        subjectAlternativeNames = [x509.IPAddress(ipAddress)]
-
-    serverBuilder = (
-        x509.CertificateBuilder()
-        .subject_name(commonNameForServer)
-        .not_valid_before(datetime.datetime.today() - oneDay)
-        .not_valid_after(datetime.datetime.today() + oneDay)
-        .serial_number(x509.random_serial_number())
-        .public_key(publicKeyForServer)
-        .add_extension(
-            x509.BasicConstraints(ca=False, path_length=None),
-            critical=True,
-        )
-        .add_extension(
-            x509.SubjectAlternativeName(subjectAlternativeNames),
-            critical=True,
-        )
-    )
-    serverCertificate = authority.authoritize(serverBuilder)
-    caSelfCert = sslverify.Certificate.loadPEM(
-        authority.cert.public_bytes(Encoding.PEM)
-    )
-    serverCert = sslverify.PrivateCertificate.loadPEM(
-        b"\n".join(
-            [
-                privateKeyForServer.private_bytes(
-                    Encoding.PEM,
-                    PrivateFormat.TraditionalOpenSSL,
-                    NoEncryption(),
-                ),
-                serverCertificate.public_bytes(Encoding.PEM),
-            ]
-        )
-    )
-
-    return caSelfCert, serverCert
 
 
 class GreetingServer(protocol.Protocol):
@@ -2081,6 +2092,27 @@ class TrustRootTests(TestCase):
         self.assertEqual(cWrapped.data, sWrapped.greeting)
 
 
+@dataclass
+class ServiceIdentitySetup:
+    clientProtocol: IProtocol
+    serverProtocol: IProtocol
+    clientWrappedProtocol: IProtocol
+    serverWrappedProtocol: IProtocol
+    pump: IOPump
+    authority: TestingAuthority
+
+    def __iter__(self) -> Iterable[object]:
+        return iter(
+            (
+                self.clientProtocol,
+                self.serverProtocol,
+                self.clientWrappedProtocol,
+                self.serverWrappedProtocol,
+                self.pump,
+            )
+        )
+
+
 class ServiceIdentityTests(SynchronousTestCase):
     """
     Tests for the verification of the peer's service's identity via the
@@ -2102,6 +2134,7 @@ class ServiceIdentityTests(SynchronousTestCase):
         serverVerifies=False,
         fakePlatformTrust=False,
         useDefaultTrust=False,
+        immediately=True,
     ):
         """
         Connect a server and a client.
@@ -2146,12 +2179,17 @@ class ServiceIdentityTests(SynchronousTestCase):
             an L{IOPump} which, when its C{pump} and C{flush} methods are
             called, will move data between the created client and server
             protocol instances
-        @rtype: 5-L{tuple} of 4 L{IProtocol}s and L{IOPump}
+        @rtype: L{ServiceIdentitySetup}
         """
-        serverCA, serverCert = certificatesForAuthorityAndServer(serverHostname)
+        clientAuthority = TestingAuthority.create()
+        serverAuthority = TestingAuthority.create()
+        untrustedAuthority = TestingAuthority.create()
+        serverCA = serverAuthority.authorityCertificate()
+        serverCert = serverAuthority.serverCertificate("Valid Cert", [serverHostname])
         other = {}
         passClientCert = None
-        clientCA, clientCert = certificatesForAuthorityAndServer("client")
+        clientCA = clientAuthority.authorityCertificate()
+        clientCert = clientAuthority.serverCertificate("Client Cert", ["client"])
         if serverVerifies:
             other.update(trustRoot=clientCA)
 
@@ -2159,8 +2197,14 @@ class ServiceIdentityTests(SynchronousTestCase):
             if validClientCertificate:
                 passClientCert = clientCert
             else:
-                bogusCA, bogus = certificatesForAuthorityAndServer("client")
-                passClientCert = bogus
+                passClientCert = untrustedAuthority.serverCertificate(
+                    "Client Cert", ["client"]
+                )
+
+        if not validCertificate:
+            serverCert = untrustedAuthority.serverCertificate(
+                "Invalid Cert", [serverHostname]
+            )
 
         serverOpts = sslverify.OpenSSLCertificateOptions(
             privateKey=serverCert.privateKey.original,
@@ -2168,8 +2212,6 @@ class ServiceIdentityTests(SynchronousTestCase):
             contextForServerName=serverNameCallback,
             **other,
         )
-        if not validCertificate:
-            serverCA, otherServer = certificatesForAuthorityAndServer(serverHostname)
 
         signature = {"hostname": clientHostname}
         if passClientCert:
@@ -2232,10 +2274,19 @@ class ServiceIdentityTests(SynchronousTestCase):
             lambda: serverTLSFactory.buildProtocol(None),
             lambda: clientTLSFactory.buildProtocol(None),
             clock=clock,
+            greet=immediately,
         )
-        pump.flush()
+        if immediately:
+            pump.flush()
 
-        return cProto, sProto, clientWrappedProto, serverWrappedProto, pump
+        return ServiceIdentitySetup(
+            cProto,
+            sProto,
+            clientWrappedProto,
+            serverWrappedProto,
+            pump,
+            serverAuthority,
+        )
 
     def test_invalidHostname(self):
         """
@@ -2254,6 +2305,62 @@ class ServiceIdentityTests(SynchronousTestCase):
 
         self.assertIsInstance(cErr, VerificationError)
         self.assertIsInstance(sErr, ConnectionClosed)
+
+    def test_sniContextSwitch(self) -> None:
+        """
+        The C{contextForServerName} argument to L{sslverify.OpenSSLCertificateOptions}
+        returns a new L{SSL.Context} that will be used for the TLS connection
+        in response to the server name indication being sent.
+        """
+
+        def switchToCorrect(servername: bytes | None) -> SSL.Context:
+            options: sslverify.OpenSSLCertificateOptions = validCert.options()
+            return options.getContext()
+
+        conf = self.serviceIdentitySetup(
+            "correct-host.example.com",
+            "wrong-host.example.com",
+            serverNameCallback=switchToCorrect,
+            immediately=False,
+        )
+        validCert = conf.authority.serverCertificate(
+            "Correct Cert", ["correct-host.example.com"]
+        )
+        cProto, sProto, cWrapped, sWrapped, pump = conf
+        pump.flush()
+        self.assertEqual(cWrapped.data, b"greetings!")
+
+        cErr = cWrapped.lostReason
+        sErr = sWrapped.lostReason
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
+
+    def test_sniCallbackError(self) -> None:
+        """
+        The C{contextForServerName} argument to
+        L{sslverify.OpenSSLCertificateOptions} can raise an exception which
+        will log an error and immediately drop the connection.
+        """
+
+        def brokenCallback(servername: bytes | None) -> SSL.Context:
+            raise RuntimeError("here's an error")
+
+        conf = self.serviceIdentitySetup(
+            "valid.example.com",
+            "valid.example.com",
+            serverNameCallback=brokenCallback,
+        )
+        cProto, sProto, cWrapped, sWrapped, pump = conf
+        logged = self.flushLoggedErrors(RuntimeError)
+        self.assertEqual(len(logged), 1)
+        self.assertEqual(str(logged[0].value), "here's an error")
+        self.assertEqual(cWrapped.data, b"")
+
+        cErr = cWrapped.lostReason.value
+        sErr = sWrapped.lostReason.value
+
+        self.assertIsInstance(cErr, ConnectionLost)
+        self.assertIsInstance(sErr, ConnectionLost)
 
     def test_validHostname(self):
         """
