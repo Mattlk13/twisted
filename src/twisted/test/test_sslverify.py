@@ -2371,8 +2371,8 @@ class ServiceIdentityTests(SynchronousTestCase):
 
     def test_noSNICallback(self) -> None:
         """
-        When SNI is not sent by the client, the server name callback will not
-        be invoked on the server.
+        When SNI is not sent by the client, the server name callback will be
+        invoked with C{None}.
         """
         sent: list[bytes] = []
         conf = self.serviceIdentitySetup(
@@ -2389,7 +2389,7 @@ class ServiceIdentityTests(SynchronousTestCase):
         sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
-        self.assertEqual(sent, [])
+        self.assertEqual(sent, [None])
 
     def test_validHostname(self):
         """
