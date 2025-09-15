@@ -11,7 +11,7 @@ from twisted.python import usage
 
 class Options(usage.Options):
     synopsis = "[options]"
-    longdesc = "Port Forwarder."
+    longdesc = "(Deprecated) Port Forwarder. See 'twist forward' instead."
     optParameters = [
         ["port", "p", "6666", "Set the port number."],
         ["host", "h", "localhost", "Set the host."],
@@ -22,5 +22,8 @@ class Options(usage.Options):
 
 
 def makeService(config):
+    """
+    Create a port-forwarding service.
+    """
     f = portforward.ProxyFactory(config["host"], int(config["dest_port"]))
     return strports.service(config["port"], f)

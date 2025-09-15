@@ -516,8 +516,6 @@ class SSHTransportBase(protocol.Protocol):
     _peerSupportsExtensions = False
     peerExtensions: Dict[bytes, bytes] = {}
 
-    factory: SSHFactory
-
     # Set by twisted.conch.ssh.userauth.SSHUserAuthServer._cbFinishedAuth
     avatar: object
     logoutFunction: Callable[[], None]
@@ -1448,6 +1446,7 @@ class SSHServerTransport(SSHTransportBase):
     @ivar p: the Diffie-Hellman group prime.
     """
 
+    factory: SSHFactory
     isClient = False
     ignoreNextPacket = 0
 

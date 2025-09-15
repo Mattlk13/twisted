@@ -91,19 +91,7 @@ class ConchSessionForTestAvatar:
         self.avatar = avatar
 
 
-if SFTPServerForUnixConchUser is None:
-    # unix should either be a fully working module, or None.  I'm not sure
-    # how this happens, but on win32 it does.  Try to cope.  --spiv.
-    import warnings
-
-    warnings.warn(
-        (
-            "twisted.conch.unix imported %r, "
-            "but doesn't define SFTPServerForUnixConchUser'"
-        )
-        % (unix,)
-    )
-else:
+if SFTPServerForUnixConchUser is not None:
 
     class FileTransferForTestAvatar(SFTPServerForUnixConchUser):  # type: ignore[misc,valid-type]
         def gotVersion(self, version, otherExt):
@@ -116,6 +104,15 @@ else:
 
     components.registerAdapter(
         FileTransferForTestAvatar, TestAvatar, filetransfer.ISFTPServer
+    )
+elif unix is not None:
+    # unix should either be a fully working module, or None.  I'm not sure how
+    # this happens, but on win32 it does.  Try to cope.  --spiv.
+    import warnings
+
+    warnings.warn(
+        f"twisted.conch.unix imported {unix!r}, "
+        "but doesn't define SFTPServerForUnixConchUser'"
     )
 
 
