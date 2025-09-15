@@ -1422,9 +1422,6 @@ class TLSProducerTests(TestCase):
             def set_app_data(self, app_data):
                 self._app_data = app_data
 
-            def get_app_data(self):
-                return self._app_data
-
             def set_connect_state(self):
                 pass
 
