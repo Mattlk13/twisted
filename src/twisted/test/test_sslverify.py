@@ -2374,7 +2374,7 @@ class ServiceIdentityTests(SynchronousTestCase):
         When SNI is not sent by the client, the server name callback will not
         be invoked on the server.
         """
-        sent = []
+        sent: list[bytes] = []
         conf = self.serviceIdentitySetup(
             "correct-host.example.com",
             "correct-host.example.com",
