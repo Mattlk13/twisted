@@ -39,7 +39,7 @@ from twisted.internet.address import (
     UNIXAddress,
     _ProcessAddress,
 )
-from twisted.internet.endpoints import StandardErrorBehavior
+from twisted.internet.endpoints import StandardErrorBehavior, _WrapperEndpoint
 from twisted.internet.error import ConnectingCancelledError
 from twisted.internet.interfaces import (
     IAddress,
@@ -4262,10 +4262,12 @@ class WrapperClientEndpointTests(unittest.TestCase):
         self.assertIs(proto.transport.transport, pump.clientIO)
 
 
-def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
+def tlsHostnameFromEndpoint(
+    memoryReactor: IReactorTCP, tlsEndpoint: _WrapperEndpoint
+) -> str:
     """
     Given a L{MemoryReactor} and the result of calling L{wrapClientTLS},
-    extract the L{IOpenSSLClientConnectionCreator} associated with it.
+    extract the hostname that TLS will be verified against.
 
     Implementation presently uses private attributes but could (and should) be
     refactored to just call C{.connect()} on the endpoint, when
@@ -4278,11 +4280,18 @@ def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
 
     @param tlsEndpoint: The result of calling L{wrapClientTLS}.
 
-    @return: the client connection creator associated with the endpoint
-        wrapper.
-    @rtype: L{IOpenSSLClientConnectionCreator}
+    @return: the IDNA-decoded str hostname.
     """
-    return tlsEndpoint._wrapperFactory(None)._connectionCreator
+    tlsMemoryBIOFactory: TLSMemoryBIOFactory = tlsEndpoint._wrapperFactory(
+        Factory.forProtocol(Protocol)
+    )
+    protocol = tlsMemoryBIOFactory.buildProtocol(None)
+    tlsExtServerNameBytes = tlsMemoryBIOFactory._creatorCallable(
+        protocol
+    ).get_servername()
+    assert tlsExtServerNameBytes is not None
+    hostname = tlsExtServerNameBytes.decode("idna")
+    return hostname
 
 
 @skipIf(skipSSL, skipSSLReason)
@@ -4338,8 +4347,8 @@ class WrapClientTLSParserTests(unittest.TestCase):
         self.assertEqual(
             endpoint._wrappedEndpoint._hostBytes, b"xn--xample-9ua.example.com"
         )
-        connectionCreator = connectionCreatorFromEndpoint(reactor, endpoint)
-        self.assertEqual(connectionCreator._hostname, "\xe9xample.example.com")
+        tlsHostname = tlsHostnameFromEndpoint(reactor, endpoint)
+        self.assertEqual(tlsHostname, "\xe9xample.example.com")
 
     def test_tls(self):
         """
@@ -4418,8 +4427,8 @@ class WrapClientTLSParserTests(unittest.TestCase):
         """
         reactor = object()
         endpoint = endpoints.clientFromString(reactor, b"tls:example.com:443")
-        creator = connectionCreatorFromEndpoint(reactor, endpoint)
-        self.assertEqual(creator._hostname, "example.com")
+        tlsHostname = tlsHostnameFromEndpoint(reactor, endpoint)
+        self.assertEqual(tlsHostname, "example.com")
         self.assertEqual(endpoint._wrappedEndpoint._hostBytes, b"example.com")
 
 
@@ -4454,7 +4463,7 @@ def replacingGlobals(function, **newGlobals):
     mergedGlobals = {}
     mergedGlobals.update(funcGlobals)
     mergedGlobals.update(newGlobals)
-    newFunction = FunctionType(codeObject, mergedGlobals)
+    newFunction = FunctionType(codeObject, mergedGlobals, argdefs=function.__defaults__)
     mergedGlobals[function.__name__] = newFunction
     return newFunction
 
