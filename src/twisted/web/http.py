@@ -3434,7 +3434,7 @@ class HTTPFactory(protocol.ServerFactory):
         self._logDateTime = datetimeToLogString(self.reactor.seconds())
         self._logDateTimeCall = self.reactor.callLater(1, self._updateLogDateTime)
 
-    def buildProtocol(self, addr: IAddress) -> Protocol | None:
+    def buildProtocol(self, addr: IAddress | None) -> Protocol | None:
         p = protocol.ServerFactory.buildProtocol(self, addr)
 
         # This is a bit of a hack to ensure that the HTTPChannel timeouts

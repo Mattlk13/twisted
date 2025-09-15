@@ -38,6 +38,7 @@ class TestSSHConnectForwardingChannel(unittest.TestCase):
         connector = reactor.connectors[0]
         protocol = factory.buildProtocol(None)
         transport = StringTransport(peerAddress=connector.getDestination())
+        assert protocol is not None
         protocol.makeConnection(transport)
 
     def test_channelOpenHostnameRequests(self) -> None:

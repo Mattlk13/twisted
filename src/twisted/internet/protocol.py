@@ -118,7 +118,7 @@ class Factory:
         directly.
         """
 
-    def buildProtocol(self, addr: IAddress) -> "Optional[Protocol]":
+    def buildProtocol(self, addr: IAddress | None) -> "Optional[Protocol]":
         """
         Create an instance of a subclass of Protocol.
 
