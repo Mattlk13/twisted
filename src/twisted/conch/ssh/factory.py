@@ -55,7 +55,7 @@ class SSHFactory(protocol.Factory[Any]):
         if not hasattr(self, "primes"):
             self.primes = self.getPrimes()
 
-    def buildProtocol(self, addr: IAddress) -> transport.SSHServerTransport:
+    def buildProtocol(self, addr: IAddress | None) -> transport.SSHServerTransport:
         """
         Create an instance of the server side of the SSH protocol.
 

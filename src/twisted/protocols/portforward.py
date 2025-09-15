@@ -63,7 +63,7 @@ class ProxyClientFactory(protocol.ClientFactory[ProxyClient]):
     def setServer(self, server):
         self.server = server
 
-    def buildProtocol(self, addr: IAddress) -> ProxyClient:
+    def buildProtocol(self, addr: IAddress | None) -> ProxyClient:
         prot = super().buildProtocol(addr)
         assert prot is not None, "peer must build protocol"
         prot.setPeer(self.server)

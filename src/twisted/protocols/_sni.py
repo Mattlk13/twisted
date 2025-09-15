@@ -91,7 +91,7 @@ class SNIConnectionCreator(object):
         lookedUp = lookupWithWildcard(self._contextLookup, None)
         if lookedUp is None:
             blankOptions = CertificateOptions(
-                callbackForServerName=partial(
+                contextForServerName=partial(
                     lookupWithWildcard,
                     self._contextLookup,
                 )
@@ -344,7 +344,7 @@ class PEMObjects:
                 certificate=privateCert.original,
                 privateKey=privateCert.privateKey.original,
                 extraCertChain=chain,
-                callbackForServerName=nameToContext,
+                contextForServerName=nameToContext,
             )
             for dnsName in names:
                 result[dnsName] = options

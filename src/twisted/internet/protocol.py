@@ -171,7 +171,7 @@ class Factory(Generic[P]):
         directly.
         """
 
-    def buildProtocol(self, addr: IAddress | None) -> "Optional[Protocol]":
+    def buildProtocol(self, addr: IAddress | None) -> "Optional[P]":
         """
         Create an instance of a subclass of Protocol.
 
