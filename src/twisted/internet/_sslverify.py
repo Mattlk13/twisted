@@ -1959,10 +1959,12 @@ class OpenSSLDiffieHellmanParameters:
 
 
 def protosFromProtocol(
-    tlsProto: TLSMemoryBIOProtocol | None, acceptableProtocols: Sequence[bytes]
+    tlsProto: TLSMemoryBIOProtocol, acceptableProtocols: Sequence[bytes]
 ) -> Sequence[bytes]:
-    if tlsProto is None:
-        return ()
+    """
+    Get the union of the ALPN protocols from the given TLSMemoryBIOProtocol and
+    from the static list of acceptable protocols.
+    """
     tlsFactory = tlsProto.factory
     assert tlsFactory is not None
     ipnf = IProtocolNegotiationFactory(tlsFactory.wrappedFactory, None)
