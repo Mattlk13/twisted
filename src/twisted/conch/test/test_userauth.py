@@ -208,26 +208,13 @@ class PrivateKeyChecker:
     credentialInterfaces = (ISSHPrivateKey,)
 
     def requestAvatarId(self, creds):
-        # Accept both RSA and Security Key public keys for testing
-        validBlobs = [
-            keys.Key.fromString(keydata.publicRSA_openssh).blob(),
-        ]
-
-        if creds.blob in validBlobs:
+        if creds.blob == keys.Key.fromString(
+            keydata.publicRSA_openssh
+        ).blob() or creds.algName.startswith(b"sk-"):
             if creds.signature is not None:
                 obj = keys.Key.fromString(creds.blob)
                 if obj.verify(creds.signature, creds.sigData):
                     return creds.username
-            else:
-                raise ValidPublicKey()
-        # blobs are generated randomly using SKDummy
-        elif creds.algName.startswith(b"sk-"):
-            if creds.signature is not None:
-                obj = keys.Key.fromString(creds.blob)
-                if obj.verify(creds.signature, creds.sigData):
-                    return creds.username
-                else:
-                    return UnauthorizedLogin()
             else:
                 raise ValidPublicKey()
         raise UnauthorizedLogin()
@@ -424,7 +411,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
         # string alg-name
         # string raw-public-key
         # string application ("ssh:")
-        pubkey_blob = NS(alg_name) + NS(enroll.public_key) + NS(b"ssh:")
+        pubkey_blob = NS(alg_name) + NS(enroll.public_key) + NS(application_name)
 
         packet = (
             NS(b"foo")
@@ -436,14 +423,12 @@ class SSHUserAuthServerTests(unittest.TestCase):
         )
 
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+        self.successResultOf(d)
 
-        def check(ignored):
-            self.assertEqual(
-                self.authServer.transport.packets,
-                [(userauth.MSG_USERAUTH_PK_OK, NS(alg_name) + NS(pubkey_blob))],
-            )
-
-        return d.addCallback(check)
+        self.assertEqual(
+            self.authServer.transport.packets,
+            [(userauth.MSG_USERAUTH_PK_OK, NS(alg_name) + NS(pubkey_blob))],
+        )
 
     def test_successfulPrivateKeyAuthentication_sk_ed25519(self):
         """
@@ -729,13 +714,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
 
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
 
-        def check(ignored):
-            self.assertEqual(
-                self.authServer.transport.packets,
-                [(userauth.MSG_USERAUTH_SUCCESS, b"")],
-            )
-
-        return d.addCallback(check)
+        return d.addCallback(self._checkFailed)
 
     def test_failedPrivateKeyAuthenticationWithoutSignature(self):
         """
