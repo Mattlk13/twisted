@@ -29,7 +29,7 @@ if requireModule("cryptography"):
     from twisted.conch.ssh import keys, transport, userauth
     from twisted.conch.ssh.common import MP, NS
     from twisted.conch.test import keydata
-    from twisted.conch.test.sk_dummy import DummySK, SKAlgorithm
+    from twisted.conch.test.sk_dummy import SK_FLAGS_USER_PRESENCE, DummySK, SKAlgorithm
 else:
 
     class transport:  # type: ignore[no-redef]
@@ -403,7 +403,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
             SKAlgorithm.ED25519,
             challenge=b"dummy-challenge",
             application=application_name,
-            flags=0x01,  # user presence
+            flags=SK_FLAGS_USER_PRESENCE,
         )
 
         alg_name = b"sk-ssh-ed25519@openssh.com"
@@ -439,7 +439,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
             SKAlgorithm.ED25519,
             challenge=b"dummy-challenge",
             application="ssh:",
-            flags=0x01,  # user presence
+            flags=SK_FLAGS_USER_PRESENCE,
         )
 
         alg_name = b"sk-ssh-ed25519@openssh.com"
@@ -500,7 +500,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
             SKAlgorithm.ECDSA,
             challenge=b"dummy-challenge",
             application=application,
-            flags=0x01,  # user presence
+            flags=SK_FLAGS_USER_PRESENCE,
         )
 
         alg_name = b"sk-ecdsa-sha2-nistp256@openssh.com"
@@ -567,7 +567,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
             SKAlgorithm.ED25519,
             challenge=b"dummy-challenge",
             application="ssh:",
-            flags=0x01,  # user presence
+            flags=SK_FLAGS_USER_PRESENCE,
         )
 
         alg_name = b"sk-ssh-ed25519@openssh.com"
@@ -616,7 +616,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
             SKAlgorithm.ED25519,
             challenge=b"dummy-challenge",
             application="ssh:",
-            flags=0x01,  # user presence
+            flags=SK_FLAGS_USER_PRESENCE,
         )
 
         alg_name = b"sk-ssh-ed25519@openssh.com"
@@ -665,13 +665,13 @@ class SSHUserAuthServerTests(unittest.TestCase):
             SKAlgorithm.ED25519,
             challenge=b"dummy-challenge",
             application="ssh:",
-            flags=0x01,  # user presence
+            flags=SK_FLAGS_USER_PRESENCE,
         )
         enroll_false = sk.enroll(
             SKAlgorithm.ED25519,
             challenge=b"dummy-challenge",
             application="ssh:",
-            flags=0x01,  # user presence
+            flags=SK_FLAGS_USER_PRESENCE,
         )
 
         alg_name = b"sk-ssh-ed25519@openssh.com"

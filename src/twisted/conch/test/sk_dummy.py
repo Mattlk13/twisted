@@ -1,3 +1,12 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Helper classes for testing security key related features.
+
+Code is based on https://github.com/openssh/openssh-portable/blob/master/regress/misc/sk-dummy/sk-dummy.c
+"""
+
 import hashlib
 from dataclasses import dataclass
 from enum import Enum
@@ -10,6 +19,8 @@ cryptography = requireModule("cryptography")
 if cryptography:
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import ec, ed25519, utils
+
+SK_FLAGS_USER_PRESENCE = 0x01
 
 
 class SKAlgorithm(Enum):

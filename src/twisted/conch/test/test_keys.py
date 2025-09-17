@@ -27,7 +27,7 @@ if cryptography:
     from cryptography.hazmat.primitives.asymmetric import padding
 
     from twisted.conch.ssh import common, keys, sexpy
-    from twisted.conch.test.sk_dummy import DummySK, SKAlgorithm
+    from twisted.conch.test.sk_dummy import SK_FLAGS_USER_PRESENCE, DummySK, SKAlgorithm
 
     ED25519_SUPPORTED = default_backend().ed25519_supported()
 else:
@@ -1158,7 +1158,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             SKAlgorithm.ED25519,
             challenge=b"dummy-challenge",
             application="ssh:",
-            flags=0x01,  # user presence
+            flags=SK_FLAGS_USER_PRESENCE,
         )
 
         alg_name = b"sk-ssh-ed25519@openssh.com"
@@ -1183,7 +1183,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             SKAlgorithm.ECDSA,
             challenge=b"dummy-challenge",
             application=application,
-            flags=0x01,  # user presence
+            flags=SK_FLAGS_USER_PRESENCE,
         )
 
         alg_name = b"sk-ecdsa-sha2-nistp256@openssh.com"
