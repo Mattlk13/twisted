@@ -257,6 +257,8 @@ class Key:
             string		public key
             string		application (user-specified, but typically "ssh:")
 
+        The security key formats are specified at https://github.com/openssh/openssh-portable/blob/80993390bed15bbd1c348f3352e55d0db01ca0fd/PROTOCOL.u2f.
+
         @type blob: L{bytes}
         @param blob: The key data.
 
@@ -1273,6 +1275,21 @@ class Key:
             string 'ssh-ed25519'
             string a
 
+        sk-ecdsa-sha2-nistp256@openssh.com keys:
+
+            string		"sk-ecdsa-sha2-nistp256@openssh.com"
+            string		curve name
+            ec_point	Q
+            string		application (user-specified, but typically "ssh:")
+
+        sk-ssh-ed25519@openssh.com keys:
+
+            string		"sk-ssh-ed25519@openssh.com"
+            string		public key
+            string		application (user-specified, but typically "ssh:")
+
+        The security key formats are specified at https://github.com/openssh/openssh-portable/blob/80993390bed15bbd1c348f3352e55d0db01ca0fd/PROTOCOL.u2f.
+
         @rtype: L{bytes}
         """
         type = self.type()
@@ -1912,3 +1929,57 @@ def _getPersistentRSAKey(location, keySize=4096):
             keyFile.read(), password=None, backend=default_backend()
         )
         return Key(privateKey)
+
+
+_DEFAULT_KEY_SIZE = 2048
+_ecSizeTable = {
+    256: ec.SECP256R1(),
+    384: ec.SECP384R1(),
+    521: ec.SECP521R1(),
+}
+
+
+def generate(keyType="rsa", keySize=None):
+    """
+    Return a new private key.
+    When `keySize` is None, the default value is used.
+    `keySize` is ignored for ed25519.
+    """
+    if not keyType:
+        keyType = "not-specified"
+    keyType = keyType.lower()
+
+    if not keySize:
+        if keyType == "ecdsa":
+            keySize = 384
+        else:
+            keySize = _DEFAULT_KEY_SIZE
+
+    key = None
+    try:
+        if keyType == "rsa":
+            key = rsa.generate_private_key(
+                public_exponent=65537,
+                key_size=keySize,
+            )
+        elif keyType == "dsa":
+            key = dsa.generate_private_key(key_size=keySize)
+        elif keyType == "ecdsa":
+            try:
+                curve = _ecSizeTable[keySize]
+            except KeyError:
+                raise BadKeyError(
+                    'Wrong key size "{}". Supported: {}.'.format(
+                        keySize, ", ".join([str(s) for s in _ecSizeTable.keys()])
+                    )
+                )
+            key = ec.generate_private_key(curve)
+        elif keyType == "ed25519":
+            key = ed25519.Ed25519PrivateKey.generate()
+        else:
+            raise BadKeyError('Unknown key type "{}".'.format(keyType))
+
+    except ValueError as error:
+        raise BadKeyError('Wrong key size "{}". {}'.format(keySize, error))
+
+    return Key(key)
