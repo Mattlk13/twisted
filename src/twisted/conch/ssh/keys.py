@@ -1305,7 +1305,11 @@ class Key:
             byteLength = (self._keyObject.curve.key_size + 7) // 8
             curve = data["curve"][-8:]
             if self._sk:
-                # Format example "sk-ecdsa-sha2-nistp256@openssh.com" -> "nistp256"
+                # We convert the curve name.
+                # The curve name is only `nistpNNN` part.
+                # Format example:
+                # "ecdsa-sha2-nistp256" -> "nistp256"
+                # "sk-ecdsa-sha2-nistp256@openssh.com" -> "nistp256"
                 curve = data["curve"][-20:-12]
             blob = (
                 common.NS(self.sshType())
