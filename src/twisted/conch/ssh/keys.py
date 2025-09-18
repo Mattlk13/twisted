@@ -304,12 +304,9 @@ class Key:
 
             return keyObject
 
-        if keyType in [b"ssh-ed25519", b"sk-ssh-ed25519@openssh.com"]:
+        if keyType in [b"ssh-ed25519"]:
             a, rest = common.getNS(rest)
             keyObject = cls._fromEd25519Components(a)
-            if keyType.startswith(b"sk-ssh-"):
-                keyObject._sk = True
-                keyObject.application = common.getNS(rest)[0]
 
             return keyObject
 

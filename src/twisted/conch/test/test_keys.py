@@ -1150,7 +1150,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
     @skipWithoutEd25519
     def test_blobSKEd25519(self):
         """
-        Tests that the correct blob is returned after parse for a sk-ssh-ed25519@openssh.com public key.
+        End-to-end test verifying that an Ed25519 security key public key blob can be
+        parsed into a Key object and serialized back without modification.
         """
         sk = DummySK()
 
@@ -1174,7 +1175,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_blobSKECDSA(self):
         """
-        Tests that the correct blob is returned after parse for a sk-ecdsa-sha2-nistp256@openssh.com public key.
+        End-to-end test verifying that an ECDSA security key public key blob can be
+        parsed into a Key object and serialized back without modification.
         """
 
         sk = DummySK()

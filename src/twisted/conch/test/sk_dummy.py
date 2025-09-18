@@ -12,13 +12,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
-from twisted.python.reflect import requireModule
-
-cryptography = requireModule("cryptography")
-
-if cryptography:
-    from cryptography.hazmat.primitives import hashes, serialization
-    from cryptography.hazmat.primitives.asymmetric import ec, ed25519, utils
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, ed25519, utils
 
 SK_FLAGS_USER_PRESENCE = 0x01
 
@@ -116,6 +111,8 @@ class DummySK:
                 format=serialization.PrivateFormat.Raw,
                 encryption_algorithm=serialization.NoEncryption(),
             )
+        else:  # pragma:r no cover
+            raise AssertionError("Unsuported algorithm.")
 
         return EnrollResponse(
             public_key=public_key,
@@ -183,3 +180,5 @@ class DummySK:
             return SignResponse(
                 flags=flags, counter=counter, signature_r=signature, signature_s=None
             )
+        else:  # pragma:r no cover
+            raise AssertionError("Unsuported algorithm.")
