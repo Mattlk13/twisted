@@ -111,7 +111,7 @@ class DummySK:
                 format=serialization.PrivateFormat.Raw,
                 encryption_algorithm=serialization.NoEncryption(),
             )
-        else:  # pragma:r no cover
+        else:  # pragma: no cover
             raise AssertionError("Unsuported algorithm.")
 
         return EnrollResponse(
@@ -180,5 +180,5 @@ class DummySK:
             return SignResponse(
                 flags=flags, counter=counter, signature_r=signature, signature_s=None
             )
-        else:  # pragma:r no cover
+        else:  # pragma: no cover
             raise AssertionError("Unsuported algorithm.")
