@@ -602,9 +602,8 @@ class SSHUserAuthServerTests(unittest.TestCase):
         packet += NS(signature_blob)
 
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
-        self.successResultOf(d)
 
-        return self._checkFailed()
+        return d.addCallback(self._checkFailed)
 
     def test_failedskPrivateKeyAuthentication(self):
         """
