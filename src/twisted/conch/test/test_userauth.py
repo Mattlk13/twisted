@@ -372,7 +372,8 @@ class SSHUserAuthServerTests(unittest.TestCase):
 
     def test_verifyValidPrivateKey(self):
         """
-        Test that verifying a valid private key works.
+        Test public key authentication without a signature
+        using a valid public key.
         """
         blob = keys.Key.fromString(keydata.publicRSA_openssh).blob()
         packet = (
@@ -395,7 +396,8 @@ class SSHUserAuthServerTests(unittest.TestCase):
 
     def test_verifyValidPrivateKey_sk_ed25519(self):
         """
-        Test that verifying a valid sk-ssh-ed25519 public key works.
+        Test public key authentication without a signature
+        using a valid sk-ssh-ed25519 private key.
         """
         sk = DummySK()
         application_name = "test-application"
@@ -481,14 +483,12 @@ class SSHUserAuthServerTests(unittest.TestCase):
         packet += NS(signature_blob)
 
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+        self.successResultOf(d)
 
-        def check(ignored):
-            self.assertEqual(
-                self.authServer.transport.packets,
-                [(userauth.MSG_USERAUTH_SUCCESS, b"")],
-            )
-
-        return d.addCallback(check)
+        return self.assertEqual(
+            self.authServer.transport.packets,
+            [(userauth.MSG_USERAUTH_SUCCESS, b"")],
+        )
 
     def test_successfulPrivateKeyAuthentication_sk_ecdsa(self):
         """
@@ -549,14 +549,12 @@ class SSHUserAuthServerTests(unittest.TestCase):
         packet += NS(signature_blob)
 
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+        self.successResultOf(d)
 
-        def check(ignored):
-            self.assertEqual(
-                self.authServer.transport.packets,
-                [(userauth.MSG_USERAUTH_SUCCESS, b"")],
-            )
-
-        return d.addCallback(check)
+        return self.assertEqual(
+            self.authServer.transport.packets,
+            [(userauth.MSG_USERAUTH_SUCCESS, b"")],
+        )
 
     def test_skPrivateKeyMissingTrailer(self):
         """
@@ -604,8 +602,9 @@ class SSHUserAuthServerTests(unittest.TestCase):
         packet += NS(signature_blob)
 
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+        self.successResultOf(d)
 
-        return d.addCallback(self._checkFailed)
+        return self._checkFailed()
 
     def test_failedskPrivateKeyAuthentication(self):
         """
