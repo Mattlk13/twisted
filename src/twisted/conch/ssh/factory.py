@@ -67,7 +67,6 @@ class SSHFactory(protocol.Factory[Any]):
         """
         t: transport.SSHServerTransport | None = super().buildProtocol(addr)
         assert t is not None
-        assert t is not None
         t.supportedPublicKeys = list(
             chain.from_iterable(
                 key.supportedSignatureAlgorithms() for key in self.privateKeys.values()
