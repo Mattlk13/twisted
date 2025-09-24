@@ -1662,7 +1662,6 @@ def contextFactoryToServernameCallback(
     factory: Callable[[bytes | None], SSL.Context | None],
 ) -> Callable[[SSL.Connection], None]:
     def contextSelectionCallback(connection: SSL.Connection) -> None:
-        # TODO: error handling?
         servername = connection.get_servername()
         try:
             newContext = factory(servername)
