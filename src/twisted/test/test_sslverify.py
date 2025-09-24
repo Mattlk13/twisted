@@ -296,7 +296,7 @@ class ListeningClient(protocol.Protocol):
 
 
 @implementer(IProtocolNegotiationFactory)
-class IPNFactory(protocol.Factory):
+class NegotiatingFactory(protocol.Factory):
     """
     A L{ClientFactory} that has a set of acceptable protocols for ALPN
     negotiation.
@@ -356,13 +356,13 @@ def _loopbackTLSConnection(
     plainClientFactory = (
         protocol.Factory()
         if clientNegotiationProtocols is None
-        else IPNFactory(clientNegotiationProtocols)
+        else NegotiatingFactory(clientNegotiationProtocols)
     )
     plainClientFactory.protocol = lambda: clientWrappedProto
     plainServerFactory = (
         protocol.Factory()
         if serverNegotiationProtocols is None
-        else IPNFactory(serverNegotiationProtocols)
+        else NegotiatingFactory(serverNegotiationProtocols)
     )
     plainServerFactory.protocol = lambda: serverWrappedProto
 
