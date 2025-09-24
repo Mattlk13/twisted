@@ -1649,30 +1649,24 @@ class OpenSSLCertificateOptions:
 
         self._ecChooser.configureECDHCurve(ctx)
         if self._contextForServerName is not None:
-            ctx.set_tlsext_servername_callback(
-                contextFactoryToServernameCallback(self._contextForServerName)
-            )
+            ctxForName = self._contextForServerName
+
+            def contextSelectionCallback(connection: SSL.Connection) -> None:
+                servername = connection.get_servername()
+                try:
+                    newContext = ctxForName(servername)
+                except BaseException:
+                    _log.failure("while looking up SNI context")
+                    connection.get_app_data().abortConnection()
+                else:
+                    if newContext is not None:
+                        connection.set_context(newContext)
+
+            ctx.set_tlsext_servername_callback(contextSelectionCallback)
         setupForALPN(ctx, self._acceptableProtocols or ())
         if not skipCiphers:
             ctx.set_cipher_list(self._cipherString.encode("ascii"))
         return ctx
-
-
-def contextFactoryToServernameCallback(
-    factory: Callable[[bytes | None], SSL.Context | None],
-) -> Callable[[SSL.Connection], None]:
-    def contextSelectionCallback(connection: SSL.Connection) -> None:
-        servername = connection.get_servername()
-        try:
-            newContext = factory(servername)
-        except BaseException:
-            _log.failure("while looking up SNI context")
-            connection.get_app_data().abortConnection()
-        else:
-            if newContext is not None:
-                connection.set_context(newContext)
-
-    return contextSelectionCallback
 
 
 OpenSSLCertificateOptions.__getstate__ = deprecated(  # type:ignore[method-assign]
