@@ -567,6 +567,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         """
         tc = self._tlsConnection
         if tc is None:
+            # We have not yet established a TLS connection, so no application
+            # layer protocol has been negotiated.
             return None
         protocolName: bytes | None = tc.get_alpn_proto_negotiated()
         if protocolName == b"":
