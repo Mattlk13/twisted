@@ -244,6 +244,21 @@ class Key:
             string 'ssh-ed25519'
             string a
 
+        The format of a sk-ecdsa-sha2-nistp256@openssh.com public key is:
+
+            string		"sk-ecdsa-sha2-nistp256@openssh.com"
+            string		curve name
+            ec_point	Q
+            string		application (user-specified, but typically "ssh:")
+
+        The format of a sk-ssh-ed25519@openssh.com public key is:
+
+            string		"sk-ssh-ed25519@openssh.com"
+            string		public key
+            string		application (user-specified, but typically "ssh:")
+
+        The security key formats are specified at https://github.com/openssh/openssh-portable/blob/80993390bed15bbd1c348f3352e55d0db01ca0fd/PROTOCOL.u2f.
+
         @type blob: L{bytes}
         @param blob: The key data.
 
@@ -272,18 +287,27 @@ class Key:
             )
 
         if keyType == b"sk-ecdsa-sha2-nistp256@openssh.com":
+            _, encodedPoint, application, rest = common.getNS(rest, 3)
             keyObject = cls._fromECEncodedPoint(
-                encodedPoint=common.getNS(rest, 2)[1],
+                encodedPoint=encodedPoint,
                 curve=b"ecdsa-sha2-nistp256",
             )
             keyObject._sk = True
+            keyObject.application = application
             return keyObject
 
-        if keyType in [b"ssh-ed25519", b"sk-ssh-ed25519@openssh.com"]:
+        if keyType == b"sk-ssh-ed25519@openssh.com":
+            a, application, rest = common.getNS(rest, 2)
+            keyObject = cls._fromEd25519Components(a)
+            keyObject._sk = True
+            keyObject.application = application
+
+            return keyObject
+
+        if keyType in [b"ssh-ed25519"]:
             a, rest = common.getNS(rest)
             keyObject = cls._fromEd25519Components(a)
-            if keyType.startswith(b"sk-ssh-"):
-                keyObject._sk = True
+
             return keyObject
 
         raise BadKeyError(f"unknown blob type: {keyType}")
@@ -903,7 +927,9 @@ class Key:
         @type keyObject: C{cryptography.hazmat.primitives.asymmetric} key.
         """
         self._keyObject = keyObject
+        # Only used for OpenSSH sk ssh keys
         self._sk = False
+        self._application = None
 
     def __eq__(self, other: object) -> bool:
         """
@@ -1246,6 +1272,21 @@ class Key:
             string 'ssh-ed25519'
             string a
 
+        sk-ecdsa-sha2-nistp256@openssh.com keys:
+
+            string		"sk-ecdsa-sha2-nistp256@openssh.com"
+            string		curve name
+            ec_point	Q
+            string		application (user-specified, but typically "ssh:")
+
+        sk-ssh-ed25519@openssh.com keys:
+
+            string		"sk-ssh-ed25519@openssh.com"
+            string		public key
+            string		application (user-specified, but typically "ssh:")
+
+        The security key formats are specified at https://github.com/openssh/openssh-portable/blob/80993390bed15bbd1c348f3352e55d0db01ca0fd/PROTOCOL.u2f.
+
         @rtype: L{bytes}
         """
         type = self.type()
@@ -1262,17 +1303,31 @@ class Key:
             )
         elif type == "EC":
             byteLength = (self._keyObject.curve.key_size + 7) // 8
-            return (
-                common.NS(data["curve"])
-                + common.NS(data["curve"][-8:])
+            curve = data["curve"][-8:]
+            if self._sk:
+                # We convert the curve name.
+                # The curve name is only `nistpNNN` part.
+                # Format example:
+                # "ecdsa-sha2-nistp256" -> "nistp256"
+                # "sk-ecdsa-sha2-nistp256@openssh.com" -> "nistp256"
+                curve = data["curve"][-20:-12]
+            blob = (
+                common.NS(self.sshType())
+                + common.NS(curve)
                 + common.NS(
                     b"\x04"
                     + utils.int_to_bytes(data["x"], byteLength)
                     + utils.int_to_bytes(data["y"], byteLength)
                 )
             )
+            if self._sk:
+                blob += common.NS(self.application)
+            return blob
         elif type == "Ed25519":
-            return common.NS(b"ssh-ed25519") + common.NS(data["a"])
+            blob = common.NS(self.sshType()) + common.NS(data["a"])
+            if self._sk:
+                blob += common.NS(self.application)
+            return blob
         else:
             raise BadKeyError(f"unknown key type: {type}")
 
@@ -1808,6 +1863,30 @@ class Key:
             return False
         else:
             return True
+
+    def isSecurityKey(self):
+        """
+        Return True if key is an OpenSSH security key.
+        """
+        return self.sshType() in [
+            b"sk-ecdsa-sha2-nistp256@openssh.com",
+            b"sk-ssh-ed25519@openssh.com",
+        ]
+
+    @property
+    def application(self):
+        """
+        Returns the application value for OpenSSH sk SSH keys
+        and None for other key types.
+        """
+        return self._application
+
+    @application.setter
+    def application(self, value):
+        """
+        Modifies the application value for OpenSSH sk SSH key types.
+        """
+        self._application = value
 
 
 def _getPersistentRSAKey(location, keySize=4096):

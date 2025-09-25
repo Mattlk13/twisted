@@ -296,7 +296,7 @@ class ListeningClient(protocol.Protocol):
 
 
 @implementer(IProtocolNegotiationFactory)
-class IPNFactory(protocol.Factory):
+class NegotiatingFactory(protocol.Factory):
     """
     A L{ClientFactory} that has a set of acceptable protocols for ALPN
     negotiation.
@@ -334,16 +334,18 @@ def _loopbackTLSConnection(
 ]:
     """
     Common implementation code for both L{loopbackTLSConnection} and
-    L{loopbackTLSConnectionInMemory}. Creates a loopback TLS connection
-    using the provided server and client context factories.
+    L{loopbackTLSConnectionInMemory}.  Creates a loopback TLS connection using
+    the provided server and client context factories.
 
-    @param serverOpts: An OpenSSL context factory for the server.
-    @type serverOpts: C{OpenSSLCertificateOptions}, or any class with an
-        equivalent API.
+    @param serverOpts: An OpenSSL connection creator for the server.
 
-    @param clientOpts: An OpenSSL context factory for the client.
-    @type clientOpts: C{OpenSSLCertificateOptions}, or any class with an
-        equivalent API.
+    @param clientOpts: An OpenSSL connection creator for the client.
+
+    @param serverNegotiationProtocols: The ALPN protocols to specify via the
+        protocol factory L{IProtocolNegotiationFactory} hook on the server.
+
+    @param clientNegotiationProtocols: The ALPN protocols to specify via the
+        protocol factory L{IProtocolNegotiationFactory} hook on the client.
 
     @return: 5-tuple of server-tls-protocol, server-inner-protocol,
         client-tls-protocol, client-inner-protocol and L{IOPump}
@@ -356,13 +358,13 @@ def _loopbackTLSConnection(
     plainClientFactory = (
         protocol.Factory()
         if clientNegotiationProtocols is None
-        else IPNFactory(clientNegotiationProtocols)
+        else NegotiatingFactory(clientNegotiationProtocols)
     )
     plainClientFactory.protocol = lambda: clientWrappedProto
     plainServerFactory = (
         protocol.Factory()
         if serverNegotiationProtocols is None
-        else IPNFactory(serverNegotiationProtocols)
+        else NegotiatingFactory(serverNegotiationProtocols)
     )
     plainServerFactory.protocol = lambda: serverWrappedProto
 
@@ -437,8 +439,6 @@ def loopbackTLSConnectionInMemory(
     serverCertificate: X509,
     serverProtocols: list[bytes] | None = None,
     clientProtocols: list[bytes] | None = None,
-    clientOptions: type[ssl.CertificateOptions] | None = None,
-    protocolsFromFactory: bool = False,
     viaFactory: bool = False,
 ) -> tuple[
     TLSMemoryBIOProtocol, TLSMemoryBIOProtocol, GreetingServer, ListeningClient, IOPump
@@ -450,10 +450,8 @@ def loopbackTLSConnectionInMemory(
 
     @param trustRoot: the C{trustRoot} argument for the client connection's
         context.
-    @type trustRoot: L{sslverify.IOpenSSLTrustRoot}
 
     @param privateKey: The private key.
-    @type privateKey: L{str} (native string)
 
     @param serverCertificate: The certificate used by the server.
 
@@ -465,34 +463,29 @@ def loopbackTLSConnectionInMemory(
     @param serverProtocols: The protocols the server is willing to negotiate
         using ALPN.
 
-    @param clientOptions: The type of C{OpenSSLCertificateOptions} class to use
-        for the client.  Defaults to C{OpenSSLCertificateOptions}.
+    @param viaFactory: If True, pass the protocols along via the
+        L{IProtocolNegotiationFactory} hook rather than the
+        C{acceptableProtocols} arguemnt to
+        L{sslverify.OpenSSLCertificateOptions}.
 
-    @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
-    @rtype: L{tuple}
+    @return: 5-tuple of server-tls-protocol, client-tls-protocol,
+        server-app-protocol, client-app-protocol, L{IOPump}
     """
-    if clientOptions is None:
-        clientOptions = sslverify.OpenSSLCertificateOptions
-
-    if viaFactory:
-        clientCertOpts = clientOptions(trustRoot=trustRoot)
-        serverCertOpts = sslverify.OpenSSLCertificateOptions(
-            privateKey=privateKey, certificate=serverCertificate
-        )
-        return _loopbackTLSConnection(
-            serverCertOpts, clientCertOpts, serverProtocols, clientProtocols
-        )
-    else:
-        clientCertOpts = clientOptions(
-            trustRoot=trustRoot,
-            acceptableProtocols=clientProtocols,
-        )
-        serverCertOpts = sslverify.OpenSSLCertificateOptions(
-            privateKey=privateKey,
-            certificate=serverCertificate,
-            acceptableProtocols=serverProtocols,
-        )
-        return _loopbackTLSConnection(serverCertOpts, clientCertOpts)
+    clientCertOpts = sslverify.OpenSSLCertificateOptions(
+        trustRoot=trustRoot,
+        acceptableProtocols=clientProtocols if not viaFactory else None,
+    )
+    serverCertOpts = sslverify.OpenSSLCertificateOptions(
+        privateKey=privateKey,
+        certificate=serverCertificate,
+        acceptableProtocols=serverProtocols if not viaFactory else None,
+    )
+    return _loopbackTLSConnection(
+        serverCertOpts,
+        clientCertOpts,
+        serverProtocols if viaFactory else None,
+        clientProtocols if viaFactory else None,
+    )
 
 
 def pathContainingDumpOf(testCase, *dumpables):
@@ -2556,7 +2549,6 @@ class ServiceIdentityTests(SynchronousTestCase):
 def negotiateProtocol(
     serverProtocols: list[bytes],
     clientProtocols: list[bytes],
-    clientOptions: type[ssl.CertificateOptions] | None = None,
     viaFactory: bool = False,
 ) -> tuple[bytes | None, Failure | None]:
     """
@@ -2565,9 +2557,6 @@ def negotiateProtocol(
     @param serverProtocols: The protocols the server is willing to negotiate.
 
     @param clientProtocols: The protocols the client is willing to negotiate.
-
-    @param clientOptions: The type of C{OpenSSLCertificateOptions} class to use
-        for the client.  Defaults to C{OpenSSLCertificateOptions}.
 
     @param viaFactory: whether to supply the client protocols or the server
         protocols via the protocol factory rather than via the context factory.
@@ -2584,7 +2573,6 @@ def negotiateProtocol(
         serverCertificate=serverCertificate.original,
         clientProtocols=clientProtocols,
         serverProtocols=serverProtocols,
-        clientOptions=clientOptions,
         viaFactory=viaFactory,
     )
     pump.flush()

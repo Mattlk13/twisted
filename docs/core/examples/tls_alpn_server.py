@@ -56,7 +56,7 @@ ACCEPTABLE_PROTOCOLS = [b"h2", b"http/1.1"]
 LISTEN_PORT = 8080
 
 
-class PrinterProtocol(Protocol):
+class ShowALPN(Protocol):
     """
     This protocol accepts incoming connections and waits for data. When
     received, it prints what the negotiated protocol is, echoes the data back,
@@ -84,7 +84,7 @@ class PrinterProtocol(Protocol):
 
 class ResponderFactory(Factory):
     def buildProtocol(self, addr):
-        return PrinterProtocol()
+        return ShowALPN()
 
 
 privateKeyData = FilePath("server-key.pem").getContent()
