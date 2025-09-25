@@ -46,7 +46,7 @@ class SSHClientFactory(protocol.ClientFactory):
         d, self.d = self.d, None
         d.errback(reason)
 
-    def buildProtocol(self, addr: IAddress) -> SSHClientTransport:
+    def buildProtocol(self, addr: IAddress | None) -> SSHClientTransport:
         trans = SSHClientTransport(self)
         if self.options["ciphers"]:
             trans.supportedCiphers = self.options["ciphers"]

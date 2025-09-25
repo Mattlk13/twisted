@@ -5,16 +5,34 @@ Overview
 --------
 
 This document describes how to secure your communications using TLS (Transport Layer Security) --- also known as SSL (Secure Sockets Layer) --- in Twisted servers and clients.
-It assumes that you know what TLS is, what some of the major reasons to use it are, and how to generate your own certificates.
-It also assumes that you are comfortable with creating TCP servers and clients as described in the :doc:`server howto <servers>` and :doc:`client howto <clients>` .
-After reading this document you should be able to create servers and clients that can use TLS to encrypt their connections, switch from using an unencrypted channel to an encrypted one mid-connection, and require client authentication.
+TLS is the protocol underlying the HTTPS protocol, so many of these concepts are used to secure your web server as well.
 
-Using TLS in Twisted requires that you have `pyOpenSSL <https://github.com/pyca/pyopenssl>`_ installed. A quick test to verify that you do is to run ``from OpenSSL import SSL`` at a python prompt and not get an error.
+To read this document, you will need to understand some pre-requisites:
 
-Twisted provides TLS support as a transport --- that is, as an alternative to TCP.
-When using TLS, use of the TCP APIs you're already familiar with, ``TCP4ClientEndpoint`` and ``TCP4ServerEndpoint`` --- or ``reactor.listenTCP`` and ``reactor.connectTCP`` --- is replaced by use of parallel TLS APIs (many of which still use the legacy name "SSL" due to age and/or compatibility with older APIs).
-To create a TLS server, use :py:class:`SSL4ServerEndpoint <twisted.internet.endpoints.SSL4ServerEndpoint>` or :py:meth:`listenSSL <twisted.internet.interfaces.IReactorSSL.listenSSL>` .
-To create a TLS client, use :py:class:`SSL4ClientEndpoint <twisted.internet.endpoints.SSL4ClientEndpoint>` or :py:meth:`connectSSL <twisted.internet.interfaces.IReactorSSL.connectSSL>` .
+- You should already know how to create TCP servers and clients with Twisted as described in the :doc:`server howto <servers>` and :doc:`client howto <clients>`.
+- You should know how to create an :doc:`Endpoint <endpoints>` .
+- You should be able to obtain trusted TLS certificates, with something like
+  `certbot <https://certbot.eff.org/>`_ and `Let's Encrypt
+  <https://letsencrypt.org>`_
+
+After reading this document you should be able to:
+
+- create servers and clients that can use TLS to encrypt their connectios
+- switch from using an unencrypted channel to an encrypted one mid-connection,
+  and
+- require client authentication using client certificates.
+
+Using TLS in Twisted requires that you have various dependencies installed that are included in Twisted's ``tls`` optional dependency group.
+To ensure that you have the required additional libraries installed, please ``pip install 'twisted[tls]'`` .
+
+TLS Quick Start
+---------------
+
+To set up a TLS server, use the ``ssl:`` string endpoint prefix.
+If you're using a command-line tool with a ``--listen`` argument, such as ``twist web``, you can create an ``ssl:`` endpoint that serves your certificate on port 443.
+
+TLS Security Basics
+-------------------
 
 TLS provides transport layer security, but it's important to understand what "security" means.
 With respect to TLS it means three things:
@@ -26,16 +44,30 @@ With respect to TLS it means three things:
 
 Without identity, neither confidentiality nor integrity is possible.
 If you don't know who you're talking to, then you might as easily be talking to your bank or to a thief who wants to steal your bank password.
-Each of the APIs listed above with "SSL" in the name requires a configuration object called (for historical reasons) a ``contextFactory``.
-(Please pardon the somewhat awkward name.)
-The ``contextFactory`` serves three purposes:
 
-1. It provides the materials to prove your own identity to the other side of the connection: in other words, who you are.
-2. It expresses your requirements of the other side's identity: in other words, who you would like to talk to (and who you trust to tell you that you're talking to the right party).
-3. It allows you to specify certain specialized options about the way the TLS protocol itself operates.
+.. note::
+
+   Twisted's TLS support is currently based on PyOpenSSL (which is, in turn, based on OpenSSL) and inherits certain PyOpenSSL terminology and types.
+   Twisted will often refer to a TLS *connection*, which is a reference to an :py:class:`pyOpenSSL Connection <OpenSSL.SSL.Connection>`, or a *context*, which is a reference to an :py:class:`pyOpenSSL Context <OpenSSL.SSL.Context>`.
+   You should not need to know PyOpenSSL's API to use Twisted's TLS support, but it's useful to understand that:
+
+   1. A Connection is an object used to individually configure a single connection to a peer, and
+   2. a Context is an object that may be shared among many connections (particularly on a server), that describes common areas of configuration between multiple connections.
 
 The requirements of clients and servers are slightly different.
-Both *can* provide a certificate to prove their identity, but commonly, TLS *servers* provide a certificate, whereas TLS *clients* check the server's certificate (to make sure they're talking to the right server) and then later identify themselves to the server some other way, often by offering a shared secret such as a password or API key via an application protocol secured with TLS and not as part of TLS itself.
+Both *can* provide a certificate to prove their identity.
+Commonly, however, TLS *servers* provide a certificate, whereas TLS *clients* check the server's certificate (to make sure they're talking to the right server).
+Clients then later identify themselves to the server some other way, often by offering a shared secret (such as a password or API key) via an application protocol secured with TLS, not as part of TLS itself.
+
+Therefore, let's begin with a simple TLS client, that will connect to an existing server.
+
+We can wrap any stream client endpoint with :py:func:`twisted.internet.endpoints.wrapClientTLS`, which will run an encrypted TLS connection over whatever the underlying transport is.
+
+This example client uses a combination of :py:class:`twisted.internet.endpoints.HostnameEndpoint`,  :py:func:`twisted.internet.endpoints.wrapClientTLS`, and :py:func:`twisted.internet.ssl.optionsForClientTLS` to connect to ``example.com`` via TLS, and issue an extremely simple HTTPS request.
+
+:download:`echoserv_ssl.py <listings/ssl/wrapped_client.py>`
+
+.. literalinclude:: listings/ssl/wrapped_client.py
 
 Since these requirements are slightly different, there are different APIs to construct an appropriate ``contextFactory`` value for a client or a server.
 
@@ -119,37 +151,6 @@ For example:
    To *properly* validate your ``hostname`` parameter according to RFC6125, please also install the `"service_identity" <https://pypi.python.org/pypi/service_identity>`_ and `"idna" <https://pypi.python.org/pypi/idna>`_ packages from PyPI.
    Without this package, Twisted will currently make a conservative guess as to the correctness of the server's certificate, but this will reject a large number of potentially valid certificates.
    `service_identity` implements the standard correctly and it will be a required dependency for TLS in a future release of Twisted.
-
-Using startTLS
---------------
-
-If you want to switch from unencrypted to encrypted traffic
-mid-connection, you'll need to turn on TLS with :py:meth:`startTLS <twisted.internet.interfaces.ITLSTransport.startTLS>` on both
-ends of the connection at the same time via some agreed-upon signal like the
-reception of a particular message. You can readily verify the switch to an
-encrypted channel by examining the packet payloads with a tool like
-`Wireshark <https://www.wireshark.org/>`_ .
-
-startTLS server
-~~~~~~~~~~~~~~~
-
-:download:`starttls_server.py <../examples/starttls_server.py>`
-
-.. literalinclude:: ../examples/starttls_server.py
-
-startTLS client
-~~~~~~~~~~~~~~~
-
-:download:`starttls_client.py <../examples/starttls_client.py>`
-
-.. literalinclude:: ../examples/starttls_client.py
-
-``startTLS`` is a transport method that gets passed a ``contextFactory``.
-It is invoked at an agreed-upon time in the data reception method of the client and server protocols.
-The server uses ``PrivateCertificate.options`` to create a ``contextFactory`` which will use a particular certificate and private key (a common requirement for TLS servers).
-
-The client creates an uncustomized ``CertificateOptions`` which is all that's necessary for a TLS client to interact with a TLS server.
-
 
 Client authentication
 ---------------------
@@ -245,17 +246,11 @@ Additionally, it is possible to limit the acceptable ciphers for your connection
 Since Twisted uses a secure cipher configuration by default, it is discouraged to do so unless absolutely necessary.
 
 
-Application Layer Protocol Negotiation (ALPN) and Next Protocol Negotiation (NPN)
----------------------------------------------------------------------------------
+Application Layer Protocol Negotiation (ALPN)
+---------------------------------------------
 
-ALPN and NPN are TLS extensions that can be used by clients and servers to negotiate what application-layer protocol will be spoken once the encrypted connection is established.
+ALPN is a TLS extension that can be used by clients and servers to negotiate what application-layer protocol will be spoken once the encrypted connection is established.
 This avoids the need for extra custom round trips once the encrypted connection is established. It is implemented as a standard part of the TLS handshake.
-
-NPN is supported from OpenSSL version 1.0.1.
-ALPN is the newer of the two protocols, supported in OpenSSL versions 1.0.2 onward.
-These functions require pyOpenSSL version 0.15 or higher.
-To query the methods supported by your system,  use :py:func:`twisted.internet.ssl.protocolNegotiationMechanisms`.
-It will return a collection of flags indicating support for NPN and/or ALPN.
 
 :py:class:`twisted.internet.ssl.CertificateOptions` and :py:func:`twisted.internet.ssl.optionsForClientTLS` allow for selecting the protocols your program is willing to speak after the connection is established.
 
@@ -273,27 +268,51 @@ and for clients:
     from twisted.internet.ssl import optionsForClientTLS
     options = optionsForClientTLS(hostname=hostname, acceptableProtocols=[b'h2', b'http/1.1'])
 
-Twisted will attempt to use both ALPN and NPN, if they're available, to maximise compatibility with peers.
-If both ALPN and NPN are supported by the peer, the result from ALPN is preferred.
-
-For NPN, the client selects the protocol to use;
-For ALPN, the server does.
-If Twisted is acting as the peer who is supposed to select the protocol, it will prefer the earliest protocol in the list that is supported by both peers.
+If Twisted is acting as the server - which, in ALPN, is the peer who is supposed to select the protocol - it will prefer the earliest protocol in the list that is supported by both peers.
 
 To determine what protocol was negotiated, after the connection is done,  use :py:attr:`TLSMemoryBIOProtocol.negotiatedProtocol <twisted.protocols.tls.TLSMemoryBIOProtocol.negotiatedProtocol>`.
 It will return one of the protocol names passed to the ``acceptableProtocols`` parameter.
-It will return ``None`` if the peer did not offer ALPN or NPN.
+It will return ``None`` if the peer did not offer ALPN.
 
 It can also return ``None`` if no overlap could be found and the connection was established regardless (some peers will do this: Twisted will not).
 In this case, the protocol that should be used is whatever protocol would have been used if negotiation had not been attempted at all.
 
 .. warning::
-    If ALPN or NPN are used and no overlap can be found, then the remote peer may choose to terminate the connection.
+    If ALPN are used and no overlap can be found, then the remote peer may choose to terminate the connection.
     This may cause the TLS handshake to fail, or may result in the connection being torn down immediately after being made.
-    If Twisted is the selecting peer (that is, Twisted is the server and ALPN is being used, or Twisted is the client and NPN is being used), and no overlap can be found, Twisted will always choose to fail the handshake rather than allow an ambiguous connection to set up.
+    If Twisted is the selecting peer (that is, Twisted is the server and ALPN is being used), and no overlap can be found, Twisted will always choose to fail the handshake rather than allow an ambiguous connection to set up.
 
-An example of using this functionality can be found in :download:`this example script for clients </core/examples/tls_alpn_npn_client.py>` and :download:`this example script for servers </core/examples/tls_alpn_npn_server.py>`.
+An example of using this functionality can be found in :download:`this example script for clients </core/examples/tls_alpn_client.py>` and :download:`this example script for servers </core/examples/tls_alpn_server.py>`.
 
+Using startTLS
+--------------
+
+If you want to switch from unencrypted to encrypted traffic
+mid-connection, you'll need to turn on TLS with :py:meth:`startTLS <twisted.internet.interfaces.ITLSTransport.startTLS>` on both
+ends of the connection at the same time via some agreed-upon signal like the
+reception of a particular message. You can readily verify the switch to an
+encrypted channel by examining the packet payloads with a tool like
+`Wireshark <https://www.wireshark.org/>`_ .
+
+startTLS server
+~~~~~~~~~~~~~~~
+
+:download:`starttls_server.py <../examples/starttls_server.py>`
+
+.. literalinclude:: ../examples/starttls_server.py
+
+startTLS client
+~~~~~~~~~~~~~~~
+
+:download:`starttls_client.py <../examples/starttls_client.py>`
+
+.. literalinclude:: ../examples/starttls_client.py
+
+``startTLS`` is a transport method that gets passed a ``contextFactory``.
+It is invoked at an agreed-upon time in the data reception method of the client and server protocols.
+The server uses ``PrivateCertificate.options`` to create a ``contextFactory`` which will use a particular certificate and private key (a common requirement for TLS servers).
+
+The client creates an uncustomized ``CertificateOptions`` which is all that's necessary for a TLS client to interact with a TLS server.
 
 Related facilities
 ------------------
