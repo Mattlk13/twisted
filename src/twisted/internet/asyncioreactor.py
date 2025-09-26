@@ -50,7 +50,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
             try:
                 _eventloop: AbstractEventLoop = get_running_loop()
             except RuntimeError:
-                _eventloop: AbstractEventLoop = new_event_loop()
+                _eventloop = new_event_loop()
             set_event_loop(_eventloop)
         else:
             _eventloop = eventloop
