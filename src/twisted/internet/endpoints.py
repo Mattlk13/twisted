@@ -2328,6 +2328,17 @@ def wrapServerTLS(
 ) -> IStreamServerEndpoint:
     """
     Wrap a server endpoint in a TLS configuration.
+
+    @param connectionCreator: The policy to create server connections.  See
+        L{twisted.internet.ssl.CertificateOptions}.
+
+    @param wrappedEndpoint: The transport server endpoint.  See
+        L{TCP6ServerEndpoint}.
+
+    @param clock: The clock interface used to schedule TLS buffered writes.
+
+    @return: an endpoint that listens with TLS encryption added to
+        C{wrappedEndpoint}
     """
     return _TLSServerEndpoint(wrappedEndpoint, connectionCreator, clock)
 
