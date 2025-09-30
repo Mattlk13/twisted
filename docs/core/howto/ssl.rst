@@ -18,8 +18,7 @@ To read this document, you will need to understand some pre-requisites:
 After reading this document you should be able to:
 
 - create servers and clients that can use TLS to encrypt their connectios
-- switch from using an unencrypted channel to an encrypted one mid-connection,
-  and
+- switch from using an unencrypted channel to an encrypted one mid-connection, and
 - require client authentication using client certificates.
 
 Using TLS in Twisted requires that you have various dependencies installed that are included in Twisted's ``tls`` optional dependency group.
@@ -28,8 +27,9 @@ To ensure that you have the required additional libraries installed, please ``pi
 TLS Quick Start
 ---------------
 
-To set up a TLS server, use the ``ssl:`` string endpoint prefix.
-If you're using a command-line tool with a ``--listen`` argument, such as ``twist web``, you can create an ``ssl:`` endpoint that serves your certificate on port 443.
+To set up a TLS server, use the ``tls:`` string endpoint prefix.
+If you're using a command-line tool with a ``--listen`` argument, such as ``twist web``, you can create an ``tls:`` endpoint that serves your certificate on port 443, by doing ``twist web --listen tls:/path/to/certbot/config/live:443``.
+If you're writing your own server, use :py:func:`twisted.internet.endpoints.serverFromString` and let your users configure TLS this way when they need it.
 
 TLS Security Basics
 -------------------
