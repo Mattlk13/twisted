@@ -31,6 +31,10 @@ To set up a TLS server, use the ``tls:`` string endpoint prefix.
 If you're using a command-line tool with a ``--listen`` argument, such as ``twist web``, you can create an ``tls:`` endpoint that serves your certificate on port 443, by doing ``twist web --listen tls:/path/to/certbot/config/live:443``.
 If you're writing your own server, use :py:func:`twisted.internet.endpoints.serverFromString` and let your users configure TLS this way when they need it.
 
+For TLS clients, we can use :py:func:`twisted.internet.endpoints.wrapClientTLS` together with :py:class:`twisted.internet.endpoints.HostnameEndpoint` and :py:func:`twisted.internet.ssl.optionsForClientTLS`, passing the same hostname to both.
+
+If your client is an HTTP client via :py:class:`twisted.web.client.Agent`, simply pass an HTTPS URL and the verification behavior will be correct by default, using your platform's trust store.
+
 TLS Security Basics
 -------------------
 
@@ -65,7 +69,7 @@ We can wrap any stream client endpoint with :py:func:`twisted.internet.endpoints
 
 This example client uses a combination of :py:class:`twisted.internet.endpoints.HostnameEndpoint`,  :py:func:`twisted.internet.endpoints.wrapClientTLS`, and :py:func:`twisted.internet.ssl.optionsForClientTLS` to connect to ``example.com`` via TLS, and issue an extremely simple HTTPS request.
 
-:download:`echoserv_ssl.py <listings/ssl/wrapped_client.py>`
+:download:`wrapped_client.py <listings/ssl/wrapped_client.py>`
 
 .. literalinclude:: listings/ssl/wrapped_client.py
 
@@ -75,7 +79,7 @@ For servers, we can use :py:class:`twisted.internet.ssl.CertificateOptions`.
 In order to prove the server's identity, you pass the ``privateKey`` and ``certificate`` arguments to this object.
 :py:meth:`twisted.internet.ssl.PrivateCertificate.options` is a convenient way to create a ``CertificateOptions`` instance configured to use a particular key and certificate.
 
-For clients, we can use :py:func:`twisted.internet.ssl.optionsForClientTLS`.
+As mentioned above, we can get a context factory configured for clients with :py:func:`twisted.internet.ssl.optionsForClientTLS`.
 This takes two arguments, ``hostname`` (which indicates what hostname must be advertised in the server's certificate) and optionally ``trustRoot``.
 By default, :py:func:`optionsForClientTLS <twisted.internet.ssl.optionsForClientTLS>` tries to obtain the trust roots from your platform, but you can specify your own.
 
