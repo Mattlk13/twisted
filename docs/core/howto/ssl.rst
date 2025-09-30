@@ -332,8 +332,7 @@ Conclusion
 
 After reading through this tutorial, you should be able to:
 
-- Use ``listenSSL`` and ``connectSSL`` to create servers and clients that use
-  TLS
-- Use ``startTLS`` to switch a channel from being unencrypted to using TLS
-  mid-connection
+- Use ``listenSSL`` and ``connectSSL`` to create servers and clients that use TLS
+- Use ALPN to negotiate application-level protocols.
+- Use ``startTLS`` to switch a channel from being unencrypted to using TLS mid-connection
 - Add server and client support for client authentication
