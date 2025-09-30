@@ -220,7 +220,7 @@ def _urljoin(base, url):
     """
     base, baseFrag = urldefrag(base)
     url, urlFrag = urldefrag(urljoin(base, url))
-    return urljoin(url, b"#" + (urlFrag or baseFrag)).strip('#')
+    return urljoin(url, b"#" + (urlFrag or baseFrag)).strip("#")
 
 
 def _makeGetterFactory(url, factoryFactory, contextFactory=None, *args, **kwargs):
