@@ -198,9 +198,21 @@ jobs:
 
           - python-version: '3.14.0-rc.3'
             tox-env: 'nodeps-withcov-posix'
-            job-name: 'nodeps-3.14'
+            job-name: 'nodeps-linux'
             runs-on: 'ubuntu-22.04'
             # twisted.conch twisted.internet twisted.test
+            trial-target: '-- twisted.application twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.trial twisted.web twisted.words'
+
+          - python-version: '3.14.0-rc.3'
+            tox-env: 'nodeps-withcov-posix'
+            job-name: 'nodeps-windows'
+            runs-on: 'windows-2022'
+            trial-target: '-- twisted.application twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.trial twisted.web twisted.words'
+
+          - python-version: '3.14.0-rc.3'
+            tox-env: 'nodeps-withcov-posix'
+            job-name: 'nodeps-macos'
+            runs-on: 'macos-14'
             trial-target: '-- twisted.application twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.trial twisted.web twisted.words'
 
     steps:
