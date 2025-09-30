@@ -108,7 +108,7 @@ TLS echo server
 
 .. literalinclude:: ../examples/echoserv_ssl.py
 
-This server uses :py:meth:`listenSSL <twisted.internet.interfaces.IReactorSSL.listenSSL>` to listen for TLS traffic on port 8000, using the certificate and private key contained in the file ``server.pem``.
+This server uses :py:func:`wrapServerTLS <twisted.internet.endpoints.wrapServerTLS>` to listen for TLS traffic on port 8000, using the certificate and private key contained in the file ``server.pem``.
 It uses the same echo example server as the TCP echo server --- even going so far as to import its protocol class.
 Assuming that you can buy your own TLS certificate from a certificate authority, this is a fairly realistic TLS server.
 
