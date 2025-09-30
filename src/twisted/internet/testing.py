@@ -669,8 +669,16 @@ class MemoryReactor:
         """
         Fake L{IReactorCore.callWhenRunning}.
         Keeps a list of invocations to make in C{self.whenRunningHooks}.
+
+        If the reactor has not started, the callable will be scheduled
+        to run when it does start. Otherwise, the callable will be invoked
+        immediately.
         """
-        self.whenRunningHooks.append((callable, args, kw))
+        if self.running:
+            callable(*args, **kw)
+            return None
+        else:
+            self.whenRunningHooks.append((callable, args, kw))
 
     def adoptStreamPort(self, fileno, addressFamily, factory):
         """
