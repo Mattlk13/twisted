@@ -551,9 +551,9 @@ class MemoryReactor:
         self.hasInstalled = False
 
         self.running = False
-        self.hasRun = True
-        self.hasStopped = True
-        self.hasCrashed = True
+        self.hasRun = False
+        self.hasStopped = False
+        self.hasCrashed = False
 
         self.whenRunningHooks = []
         self.triggers = {}
@@ -674,7 +674,11 @@ class MemoryReactor:
         to run when it does start. Otherwise, the callable will be invoked
         immediately.
         """
-        if self.running:
+        # Normally, we would only key off of `self.running`, but the `MemoryReactor` is
+        # a bit unique in the fact that it stops itself immediately after calling
+        # `MemoryReactor.run()`. We're going to consider it good enough if the reactor
+        # has ever been started (`self.hasRun`).
+        if self.running or self.hasRun:
             callable(*args, **kw)
             return None
         else:
