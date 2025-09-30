@@ -200,20 +200,23 @@ jobs:
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-linux'
             runs-on: 'ubuntu-22.04'
-            # twisted.conch twisted.internet twisted.test
-            trial-target: '-- twisted.application twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.trial twisted.web twisted.words'
+            # twisted.conch https://github.com/twisted/twisted/issues/12512
+            # twisted.test
+            trial-target: '-- twisted.application twisted.cred twisted.internet twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.trial twisted.web twisted.words'
 
           - python-version: '3.14.0-rc.3'
-            tox-env: 'nodeps-withcov-posix'
-            job-name: 'nodeps-windows'
+            tox-env: 'nodeps-withcov-windows'
+            job-name: 'nodeps-windows-select'
             runs-on: 'windows-2022'
-            trial-target: '-- twisted.application twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.trial twisted.web twisted.words'
+            # To add support for iocp and asyncio reactors:
+            # twisted.internet https://github.com/twisted/twisted/issues/12513
+            trial-target: '-- twisted.application twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.trial twisted.web twisted.words'
 
           - python-version: '3.14.0-rc.3'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-macos'
             runs-on: 'macos-14'
-            trial-target: '-- twisted.application twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.trial twisted.web twisted.words'
+            trial-target: '-- twisted.application twisted.cred twisted.internet twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.trial twisted.web twisted.words'
 
     steps:
     - uses: actions/checkout@v4
