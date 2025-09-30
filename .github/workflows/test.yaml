@@ -109,9 +109,9 @@ jobs:
           # end to end functional test usage for non-distributed trial runs.
           # When updating the minimum Python version here, also update the
           # `python_requires` from `setup.cfg`.
-          # Here we should have the oldest Python version supported 
+          # Here we should have the oldest Python version supported
           # by GitHub. The availability of the Python version
-          # depends on the version of Ubuntu in use. 
+          # depends on the version of Ubuntu in use.
           # See https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
           - python-version: '3.9.12'
             tox-env: 'nodeps-withcov-posix'
@@ -196,6 +196,12 @@ jobs:
             job-name: 'gtk-tests'
             trial-args: '--reactor=gi -j 4'
 
+          - python-version: '3.14.0-rc.3'
+            tox-env: 'nodeps-withcov-posix'
+            job-name: 'nodeps-3.14'
+            runs-on: 'ubuntu-22.04'
+            # twisted.conch twisted.internet twisted.test
+            trial-target: '-- twisted.application twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.trial twisted.web twisted.words'
 
     steps:
     - uses: actions/checkout@v4
