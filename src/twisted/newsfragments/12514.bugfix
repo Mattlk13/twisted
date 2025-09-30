@@ -1,1 +1,1 @@
-Fix `MemoryReactor.callWhenRunning` not invoking callbacks if already started.
+`twisted.internet.testing.MemoryReactor.callWhenRunning` now invokes the callback immediately, if already started.
