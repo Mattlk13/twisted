@@ -1,0 +1,1 @@
+Fix `MemoryReactor.callWhenRunning` not invoking callbacks if already started.
