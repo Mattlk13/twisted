@@ -89,7 +89,7 @@ You may obtain an object suitable to pass as the ``trustRoot=`` parameter with a
 
    Currently, Twisted only supports loading of OpenSSL's default trust roots.
    If you've built OpenSSL yourself, you must take care to include these in the appropriate location.
-   If you're using the OpenSSL shipped as part of macOS 10.5-10.9, this behavior will also be correct.
+   If you're using macOS, it will work by default as long as the homebrew ``openssl`` package is installed.
    If you're using Debian, or one of its derivatives like Ubuntu, install the `ca-certificates` package to ensure you have trust roots available, and this behavior should also be correct.
    Work is ongoing to make :py:func:`platformTrust <twisted.internet.ssl.platformTrust>` --- the API that :py:func:`optionsForClientTLS <twisted.internet.ssl.optionsForClientTLS>` uses by default --- more robust.
    For example, :py:func:`platformTrust <twisted.internet.ssl.platformTrust>` should fall back to `the "certifi" package <https://pypi.org/project/certifi>`_ if no platform trust roots are available but it doesn't do that yet.
@@ -159,17 +159,14 @@ For example:
 Client authentication
 ---------------------
 
-Server and client-side changes to require client authentication fall
-largely under the dominion of pyOpenSSL, but few examples seem to exist on
-the web so for completeness a sample server and client are provided here.
-
+While TLS clients must always verify their server's certificate, servers may also authenticate clients by way of a client certificate.
 
 TLS server with client authentication via client certificate verification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When one or more certificates are passed to ``PrivateCertificate.options``, the resulting ``contextFactory`` will use those certificates as trusted authorities and require that the peer present a certificate with a valid chain anchored by one of those authorities.
+When one or more certificates are passed to :py:meth:`twisted.internet.ssl.PrivateCertificate.options`, the resulting ``contextFactory`` will use those certificates as trusted authorities and require that the client present a certificate with a valid chain anchored by one of those authorities, much as the ``trustRoot`` parameter to :py:func:`twisted.internet.ssl.optionsForClientTLS` works.
 
-A server can use this to verify that a client provides a valid certificate signed by one of those certificate authorities; here is an example of such a certificate.
+A server can use this to verify that a client provides a valid certificate signed by one of those certificate authorities; here is an example of passing such a certificate.
 
 :download:`ssl_clientauth_server.py <../examples/ssl_clientauth_server.py>`
 
@@ -184,8 +181,9 @@ The following client then supplies such a certificate as the ``clientCertificate
 
 .. literalinclude:: ../examples/ssl_clientauth_client.py
 
-Notice that these two examples are very, very similar to the TLS echo examples above.
+Notice that these two examples are very similar to the TLS echo examples above.
 In fact, you can demonstrate a failed authentication by simply running ``echoclient_ssl.py`` against ``ssl_clientauth_server.py``; you'll see no output because the server closed the connection rather than echoing the client's authenticated input.
+
 
 TLS Protocol Options
 ~~~~~~~~~~~~~~~~~~~~
@@ -282,21 +280,20 @@ It can also return ``None`` if no overlap could be found and the connection was 
 In this case, the protocol that should be used is whatever protocol would have been used if negotiation had not been attempted at all.
 
 .. warning::
-    If ALPN are used and no overlap can be found, then the remote peer may choose to terminate the connection.
+    If ALPN is used and no overlap can be found, then the remote peer may terminate the connection.
     This may cause the TLS handshake to fail, or may result in the connection being torn down immediately after being made.
-    If Twisted is the selecting peer (that is, Twisted is the server and ALPN is being used), and no overlap can be found, Twisted will always choose to fail the handshake rather than allow an ambiguous connection to set up.
+    If Twisted is the server, and no overlap can be found, Twisted will always choose to fail the handshake rather than allow an ambiguous connection to set up.
 
 An example of using this functionality can be found in :download:`this example script for clients </core/examples/tls_alpn_client.py>` and :download:`this example script for servers </core/examples/tls_alpn_server.py>`.
 
-Using startTLS
+Using STARTTLS
 --------------
 
-If you want to switch from unencrypted to encrypted traffic
-mid-connection, you'll need to turn on TLS with :py:meth:`startTLS <twisted.internet.interfaces.ITLSTransport.startTLS>` on both
-ends of the connection at the same time via some agreed-upon signal like the
-reception of a particular message. You can readily verify the switch to an
-encrypted channel by examining the packet payloads with a tool like
-`Wireshark <https://www.wireshark.org/>`_ .
+If you want to switch from unencrypted to encrypted traffic mid-connection, in the style of protocols like `SMTP STARTTLS <https://datatracker.ietf.org/doc/html/rfc3207>`_\ , you can begin a TLS negotiation mid-connection with the :py:meth:`startTLS <twisted.internet.interfaces.ITLSTransport.startTLS>` methods on both ends of the connection at the same time via some agreed-upon signal like the reception of a particular plain-text message.
+
+.. warning::
+
+   While Twisted provides support for handling ``STARTTLS``-style commands, as they are an important part of several core internet protocols, note that any plain-text messages that you send prior to starting the secure connection are parts of a secure protocol cryptographic construction and thus count as “`rolling your own crypto <https://www.schneier.com/blog/archives/2011/04/schneiers_law.html>`_\ ”, and you shouldn't do it unless you **really** know what you're doing!  In general, prefer using TLS endpoints, especially when designing new protocols.
 
 startTLS server
 ~~~~~~~~~~~~~~~
@@ -312,7 +309,7 @@ startTLS client
 
 .. literalinclude:: ../examples/starttls_client.py
 
-``startTLS`` is a transport method that gets passed a ``contextFactory``.
+:py:meth:`twisted.internet.interfaces.ITLSTransport.startTLS` is a transport method that gets passed a ``contextFactory``.
 It is invoked at an agreed-upon time in the data reception method of the client and server protocols.
 The server uses ``PrivateCertificate.options`` to create a ``contextFactory`` which will use a particular certificate and private key (a common requirement for TLS servers).
 
@@ -321,10 +318,9 @@ The client creates an uncustomized ``CertificateOptions`` which is all that's ne
 Related facilities
 ------------------
 
-:py:mod:`twisted.protocols.amp` supports encrypted
-connections and exposes a ``startTLS`` method one can use or
-subclass. :py:mod:`twisted.web` has built-in TLS support in
-its :py:mod:`client <twisted.web.client>` , :py:mod:`http <twisted.web.http>` , and :py:mod:`xmlrpc <twisted.web.xmlrpc>` modules.
+- :py:mod:`twisted.web` has built-in TLS support in its :py:mod:`client <twisted.web.client>` , :py:mod:`http <twisted.web.http>` , and :py:mod:`xmlrpc <twisted.web.xmlrpc>` modules.
+
+- :py:mod:`twisted.protocols.amp.StartTLS` is a command you can subclass to allow sending an unencrypted preamble to a custom AMP protocol, but for the reasons mentioned above, you should always prefer running AMP over a TLS endpoint unless you know exactly why you might need this and are confident that you have the relevant expertise to design a secure protocol using it.
 
 
 Conclusion
@@ -332,7 +328,7 @@ Conclusion
 
 After reading through this tutorial, you should be able to:
 
-- Use ``listenSSL`` and ``connectSSL`` to create servers and clients that use TLS
+- Use :py:func:`wrapServerTLS <twisted.internet.endpoints.wrapServerTLS>` and :py:func:`wrapClientTLS <twisted.internet.endpoints.wrapClientTLS>` to create servers and clients that use TLS
 - Use ALPN to negotiate application-level protocols.
-- Use ``startTLS`` to switch a channel from being unencrypted to using TLS mid-connection
+- Use :py:meth:`twisted.internet.interfaces.ITLSTransport.startTLS` to switch a channel from being unencrypted to using TLS mid-connection
 - Add server and client support for client authentication
