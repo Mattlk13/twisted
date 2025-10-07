@@ -23,22 +23,6 @@ from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 
 try:
-    from twisted.conch import unix as _unix
-except ImportError:
-    unix = None
-else:
-    unix = _unix
-
-try:
-    from twisted.conch.unix import (
-        SFTPServerForUnixConchUser as _SFTPServerForUnixConchUser,
-    )
-except ImportError:
-    SFTPServerForUnixConchUser = None
-else:
-    SFTPServerForUnixConchUser = _SFTPServerForUnixConchUser
-
-try:
     import cryptography as _cryptography
 except ImportError:
     cryptography = None
@@ -77,6 +61,27 @@ class TestAvatar(ConchUser):
         return r
 
 
+try:
+    from twisted.conch.unix import SFTPServerForUnixConchUser
+except ImportError:
+    unix = False
+else:
+    unix = True
+
+    class FileTransferForTestAvatar(SFTPServerForUnixConchUser):
+        def gotVersion(self, version, otherExt):
+            return {b"conchTest": b"ext data"}
+
+        def extendedRequest(self, extName, extData):
+            if extName == b"testExtendedRequest":
+                return b"bar"
+            raise NotImplementedError
+
+    components.registerAdapter(
+        FileTransferForTestAvatar, TestAvatar, filetransfer.ISFTPServer
+    )
+
+
 class FileTransferTestAvatar(TestAvatar):
     def __init__(self, homeDir):
         TestAvatar.__init__(self)
@@ -89,31 +94,6 @@ class FileTransferTestAvatar(TestAvatar):
 class ConchSessionForTestAvatar:
     def __init__(self, avatar):
         self.avatar = avatar
-
-
-if SFTPServerForUnixConchUser is not None:
-
-    class FileTransferForTestAvatar(SFTPServerForUnixConchUser):  # type: ignore[misc,valid-type]
-        def gotVersion(self, version, otherExt):
-            return {b"conchTest": b"ext data"}
-
-        def extendedRequest(self, extName, extData):
-            if extName == b"testExtendedRequest":
-                return b"bar"
-            raise NotImplementedError
-
-    components.registerAdapter(
-        FileTransferForTestAvatar, TestAvatar, filetransfer.ISFTPServer
-    )
-elif unix is not None:
-    # unix should either be a fully working module, or None.  I'm not sure how
-    # this happens, but on win32 it does.  Try to cope.  --spiv.
-    import warnings
-
-    warnings.warn(
-        f"twisted.conch.unix imported {unix!r}, "
-        "but doesn't define SFTPServerForUnixConchUser'"
-    )
 
 
 class SFTPTestBase(TestCase):
