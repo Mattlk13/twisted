@@ -91,11 +91,6 @@ class FileTransferTestAvatar(TestAvatar):
         return FilePath(os.getcwd()).preauthChild(self.homeDir.path)
 
 
-class ConchSessionForTestAvatar:
-    def __init__(self, avatar):
-        self.avatar = avatar
-
-
 class SFTPTestBase(TestCase):
     def setUp(self):
         self.testDir = FilePath(self.mktemp())
