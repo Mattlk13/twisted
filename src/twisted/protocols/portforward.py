@@ -15,9 +15,6 @@ from twisted.internet.interfaces import (
     IStreamServerEndpoint,
     ITransport,
 )
-from twisted.logger import Logger
-
-log = Logger()
 
 
 class Proxy(protocol.Protocol):
@@ -32,8 +29,6 @@ class Proxy(protocol.Protocol):
         if self.peer is not None:
             self.peer.transport.loseConnection()
             self.peer = None
-        elif self.noisy:
-            log.info("Unable to connect to peer: {reason}", reason=reason)
 
     def dataReceived(self, data):
         self.peer.transport.write(data)
