@@ -1396,12 +1396,12 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         self.assertEqual(options, ctx._options & options)
         self.assertEqual(0, ctx._options & antiOptions)
 
-    def test_tlsProtocolsAllModernTLS(self):
+    def test_tlsProtocols1_1And1_2(self):
         """
         When calling L{sslverify.OpenSSLCertificateOptions} with
         C{insecurelyLowerMinimumTo} set to TLSv1.0 and
-        C{lowerMaximumSecurityTo} to TLSv1.2, it will exclude both SSLs and
-        the (unreleased) TLSv1.3.
+        C{lowerMaximumSecurityTo} to TLSv1.2, it will exclude both SSLv2/v3 and
+        TLSv1.3.
         """
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
