@@ -1311,7 +1311,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             | SSL.OP_NO_TLSv1_2
             | opts._OP_NO_TLSv1_3
         )
+        antiOptions = SSL.OP_NO_SSLv3
         self.assertEqual(options, ctx._options & options)
+        self.assertEqual(0, ctx._options & antiOptions)
 
     def test_tlsProtocolsTLSv1Point0Only(self):
         """
@@ -1336,7 +1338,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             | SSL.OP_NO_TLSv1_2
             | opts._OP_NO_TLSv1_3
         )
+        antiOptions = SSL.OP_NO_TLSv1
         self.assertEqual(options, ctx._options & options)
+        self.assertEqual(0, ctx._options & antiOptions)
 
     def test_tlsProtocolsTLSv1Point1Only(self):
         """
@@ -1361,7 +1365,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             | SSL.OP_NO_TLSv1_2
             | opts._OP_NO_TLSv1_3
         )
+        antiOptions = SSL.OP_NO_TLSv1_1
         self.assertEqual(options, ctx._options & options)
+        self.assertEqual(0, ctx._options & antiOptions)
 
     def test_tlsProtocolsTLSv1Point2Only(self):
         """
@@ -1386,7 +1392,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             | SSL.OP_NO_TLSv1_1
             | opts._OP_NO_TLSv1_3
         )
+        antiOptions = SSL.OP_NO_TLSv1_2
         self.assertEqual(options, ctx._options & options)
+        self.assertEqual(0, ctx._options & antiOptions)
 
     def test_tlsProtocolsAllModernTLS(self):
         """
@@ -1949,18 +1957,18 @@ class OpenSSLOptionsECDHIntegrationTests(OpenSSLOptionsTestsMixin, TestCase):
         # and OpenSSL only supports ECHDE groups with TLS 1.3:
         # https://wiki.openssl.org/index.php/TLS1.3#Groups
         #
-        # so TLS 1.3 implies ECDHE.  Force this test to use TLS 1.3 to
+        # so TLS 1.3 implies ECDHE.  Force this test to use TLS 1.2 to
         # ensure ECDH is selected when it might not be.
         self.loopback(
             sslverify.OpenSSLCertificateOptions(
                 privateKey=self.sKey,
                 certificate=self.sCert,
                 requireCertificate=False,
-                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_3,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
             ),
             sslverify.OpenSSLCertificateOptions(
                 requireCertificate=False,
-                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_3,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
             ),
             onData=onData,
         )
