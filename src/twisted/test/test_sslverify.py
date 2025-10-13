@@ -1418,7 +1418,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             | SSL.OP_NO_SSLv3
             | opts._OP_NO_TLSv1_3
         )
+        antiOptions = SSL.OP_NO_TLSv1_2 | SSL.OP_NO_TLSv1_1
         self.assertEqual(options, ctx._options & options)
+        self.assertEqual(0, ctx._options & antiOptions)
 
     def test_tlsProtocolsAtLeastAllSecureTLS(self):
         """
