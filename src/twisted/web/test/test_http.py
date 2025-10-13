@@ -3956,7 +3956,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         for x in val:
             proto.dataReceived(x)
 
-        proto._channel.requests[0].finish()  # type:ignore
+        proto._channel.requests[0].finish()
 
         # A log message should be written out
         self.assertIn(b'sometime "GET /path HTTP/1.1"', logFile.getvalue())
