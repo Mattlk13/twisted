@@ -103,11 +103,9 @@ def _getExcludedTLSProtocols(oldest, newest):
     @rtype: L{list} of L{TLSVersion} constants.
     """
     versions = list(TLSVersion.iterconstants())
-    excludedVersions = [x for x in versions[: versions.index(oldest)]]
-
-    if newest:
-        excludedVersions.extend([x for x in versions[versions.index(newest) :]])
-
+    excludedOlder = versions[: versions.index(oldest)]
+    excludedNewer = versions[versions.index(newest) + 1 :] if newest else []
+    excludedVersions = excludedOlder + excludedNewer
     return excludedVersions
 
 
