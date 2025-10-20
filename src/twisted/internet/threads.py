@@ -10,7 +10,7 @@ For basic support see reactor threading API docs.
 from __future__ import annotations
 
 import queue as Queue
-from typing import Callable, TypeVar
+from typing import Callable, TypeVar, Union
 
 from typing_extensions import ParamSpec
 
@@ -65,7 +65,11 @@ def deferToThreadPool(
     return d
 
 
-def deferToThread(f, *args, **kwargs):
+def deferToThread(
+    f: Callable[_P, _R],
+    *args: _P.args,
+    **kwargs: _P.kwargs,
+) -> defer.Deferred[_R]:
     """
     Run a function in a thread and return the result as a Deferred.
 
@@ -101,7 +105,12 @@ def callMultipleInThread(tupleList):
     reactor.callInThread(_runMultiple, tupleList)
 
 
-def blockingCallFromThread(reactor, f, *a, **kw):
+def blockingCallFromThread(
+    reactor: IReactorFromThreads,
+    f: Union[Callable[_P, _R], Callable[_P, defer.Deferred[_R]]],
+    *a: _P.args,
+    **kw: _P.kwargs,
+) -> _R:
     """
     Run a function in the reactor from a thread, and wait for the result
     synchronously.  If the function returns a L{Deferred}, wait for its
