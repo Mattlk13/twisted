@@ -10,12 +10,12 @@ For basic support see reactor threading API docs.
 from __future__ import annotations
 
 import queue as Queue
-from typing import Callable, TypeVar, Union
+from typing import Callable, TypeVar, Union, cast
 
 from typing_extensions import ParamSpec
 
 from twisted.internet import defer
-from twisted.internet.interfaces import IReactorFromThreads
+from twisted.internet.interfaces import IReactorFromThreads, IReactorThreads
 from twisted.python import failure
 from twisted.python.threadpool import ThreadPool
 
@@ -83,7 +83,9 @@ def deferToThread(
     """
     from twisted.internet import reactor
 
-    return deferToThreadPool(reactor, reactor.getThreadPool(), f, *args, **kwargs)
+    reactor_ = cast(IReactorThreads, reactor)
+
+    return deferToThreadPool(reactor_, reactor_.getThreadPool(), f, *args, **kwargs)
 
 
 def _runMultiple(tupleList):
@@ -132,7 +134,7 @@ def blockingCallFromThread(
         C{blockingCallFromThread} will raise that failure's exception (see
         L{Failure.raiseException}).
     """
-    queue = Queue.Queue()
+    queue: Queue.Queue[_R] = Queue.Queue()
 
     def _callFromThread():
         result = defer.maybeDeferred(f, *a, **kw)

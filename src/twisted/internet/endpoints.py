@@ -18,7 +18,22 @@ import os
 import re
 import socket
 import warnings
-from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+    TypeVar,
+    ParamSpec,
+    Concatenate,
+    ClassVar,
+    Protocol as TypingProtocol,
+)
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer
@@ -116,6 +131,29 @@ __all__ = [
     "wrapServerTLS",
     "wrapClientTLS",
 ]
+
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+class _DeferToThreadFunction(TypingProtocol):
+    def __call__(
+        self, f: Callable[_P, _R], *args: _P.args, **kwds: _P.kwargs
+    ) -> defer.Deferred[_R]: ...
+
+
+def _staticmethod(f: Callable[_P, _R]) -> Callable[_P, _R]:
+    """
+    Wraps generic function as a staticmethod while preserving its signature for mypy.
+
+    Mypy cannot correctly infer the type when a generic function is directly passed to
+    staticmethod, resulting in an incorrect type annotation like 'staticmethod[Never, Never]'.
+
+    This helper function ensures that mypy understands resulting type as a Callable
+    with the same signature as original function.
+    """
+    return staticmethod(f)
 
 
 class _WrappingProtocol(Protocol):
@@ -651,7 +689,9 @@ class TCP6ClientEndpoint:
     """
 
     _getaddrinfo = staticmethod(socket.getaddrinfo)
-    _deferToThread = staticmethod(threads.deferToThread)
+    _deferToThread: ClassVar[_DeferToThreadFunction] = _staticmethod(
+        threads.deferToThread
+    )
     _GAI_ADDRESS = 4
     _GAI_ADDRESS_HOST = 0
 
@@ -827,7 +867,9 @@ class HostnameEndpoint:
     """
 
     _getaddrinfo = staticmethod(socket.getaddrinfo)
-    _deferToThread = staticmethod(threads.deferToThread)
+    _deferToThread: ClassVar[_DeferToThreadFunction] = _staticmethod(
+        threads.deferToThread
+    )
     _DEFAULT_ATTEMPT_DELAY = 0.3
 
     def __init__(
