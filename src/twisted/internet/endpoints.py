@@ -29,11 +29,10 @@ from typing import (
     Type,
     Union,
     TypeVar,
-    ParamSpec,
-    Concatenate,
     ClassVar,
     Protocol as TypingProtocol,
 )
+from typing_extensions import ParamSpec
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer
