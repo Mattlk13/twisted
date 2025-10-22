@@ -32,17 +32,15 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
-    ClassVar,
-    Protocol as TypingProtocol,
     Union,
 )
-from typing_extensions import ParamSpec
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer
 
 from constantly import NamedConstant, Names
 from incremental import Version
+from typing_extensions import ParamSpec
 
 from twisted.internet import defer, error, fdesc, interfaces, threads
 from twisted.internet.abstract import isIPv6Address
