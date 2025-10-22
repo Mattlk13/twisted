@@ -22,7 +22,6 @@ from typing import (
     Any,
     Callable,
     ClassVar,
-    Concatenate,
     Iterable,
     List,
     Optional,
