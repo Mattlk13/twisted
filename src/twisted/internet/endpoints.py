@@ -21,16 +21,20 @@ import warnings
 from typing import (
     Any,
     Callable,
+    ClassVar,
+    Concatenate,
     Iterable,
     List,
     Optional,
+    ParamSpec,
+    Protocol as TypingProtocol,
     Sequence,
     Tuple,
     Type,
-    Union,
     TypeVar,
     ClassVar,
     Protocol as TypingProtocol,
+    Union,
 )
 from typing_extensions import ParamSpec
 from unicodedata import normalize
@@ -139,7 +143,8 @@ _R = TypeVar("_R")
 class _DeferToThreadFunction(TypingProtocol):
     def __call__(
         self, f: Callable[_P, _R], *args: _P.args, **kwds: _P.kwargs
-    ) -> defer.Deferred[_R]: ...
+    ) -> defer.Deferred[_R]:
+        ...
 
 
 def _staticmethod(f: Callable[_P, _R]) -> Callable[_P, _R]:
