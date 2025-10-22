@@ -25,7 +25,6 @@ from typing import (
     Iterable,
     List,
     Optional,
-    ParamSpec,
     Protocol as TypingProtocol,
     Sequence,
     Tuple,
