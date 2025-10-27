@@ -197,15 +197,14 @@ jobs:
             job-name: 'gtk-tests'
             trial-args: '--reactor=gi -j 4'
 
-          - python-version: '3.14.0-rc.3'
+          - python-version: '3.14'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-linux'
             runs-on: 'ubuntu-22.04'
             # twisted.conch https://github.com/twisted/twisted/issues/12512
-            # twisted.test
             trial-target: '-- twisted.application twisted.cred twisted.internet twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.trial twisted.web twisted.words'
 
-          - python-version: '3.14.0-rc.3'
+          - python-version: '3.14'
             tox-env: 'nodeps-withcov-windows'
             job-name: 'nodeps-windows-select'
             runs-on: 'windows-2022'
@@ -216,7 +215,7 @@ jobs:
             # https://github.com/twisted/twisted/issues/12521
             trial-args: '--reactor=select'
 
-          - python-version: '3.14.0-rc.3'
+          - python-version: '3.14'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-macos'
             runs-on: 'macos-14'
