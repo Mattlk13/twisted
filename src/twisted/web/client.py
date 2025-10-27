@@ -220,7 +220,10 @@ def _urljoin(base, url):
     """
     base, baseFrag = urldefrag(base)
     url, urlFrag = urldefrag(urljoin(base, url))
-    return urljoin(url, b"#" + (urlFrag or baseFrag))
+    # We strip the hash to get test pass on Python 3.14
+    # Looks like a regression in 3.14
+    # See https://github.com/twisted/twisted/issues/12427
+    return urljoin(url, b"#" + (urlFrag or baseFrag)).strip(b"#")
 
 
 def _makeGetterFactory(url, factoryFactory, contextFactory=None, *args, **kwargs):
