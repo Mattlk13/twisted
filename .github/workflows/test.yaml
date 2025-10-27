@@ -109,9 +109,9 @@ jobs:
           # end to end functional test usage for non-distributed trial runs.
           # When updating the minimum Python version here, also update the
           # `python_requires` from `setup.cfg`.
-          # Here we should have the oldest Python version supported 
+          # Here we should have the oldest Python version supported
           # by GitHub. The availability of the Python version
-          # depends on the version of Ubuntu in use. 
+          # depends on the version of Ubuntu in use.
           # See https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
           - python-version: '3.9.12'
             tox-env: 'nodeps-withcov-posix'
@@ -142,6 +142,7 @@ jobs:
           - python-version: '3.13'
 
           # Newest Intel macOS and oldest Python (major) supported versions.
+          # On 3.9 pyobjc-core build fails.
           - python-version: '3.10'
             runs-on: 'macos-13'
             job-name: 'macos-13-default-tests'
@@ -196,6 +197,29 @@ jobs:
             job-name: 'gtk-tests'
             trial-args: '--reactor=gi -j 4'
 
+          - python-version: '3.14'
+            tox-env: 'nodeps-withcov-posix'
+            job-name: 'nodeps-linux'
+            runs-on: 'ubuntu-22.04'
+            # twisted.conch https://github.com/twisted/twisted/issues/12512
+            trial-target: '-- twisted.application twisted.cred twisted.internet twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.trial twisted.web twisted.words'
+
+          - python-version: '3.14'
+            tox-env: 'nodeps-withcov-windows'
+            job-name: 'nodeps-windows-select'
+            runs-on: 'windows-2022'
+            # To add support for iocp and asyncio reactors:
+            # twisted.internet https://github.com/twisted/twisted/issues/12513
+            trial-target: '-- twisted.application twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.trial twisted.web twisted.words'
+            # Should be removed once we can run distributed tests on Windows
+            # https://github.com/twisted/twisted/issues/12521
+            trial-args: '--reactor=select'
+
+          - python-version: '3.14'
+            tox-env: 'nodeps-withcov-posix'
+            job-name: 'nodeps-macos'
+            runs-on: 'macos-14'
+            trial-target: '-- twisted.application twisted.cred twisted.internet twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.trial twisted.web twisted.words'
 
     steps:
     - uses: actions/checkout@v4
