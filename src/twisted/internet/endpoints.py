@@ -152,6 +152,9 @@ def _staticmethod(f: Callable[_P, _R]) -> Callable[_P, _R]:
 
     This helper function ensures that mypy understands resulting type as a Callable
     with the same signature as original function.
+
+    See follow example on mypy playground to test if the workaround is still necessary:
+    https://mypy-play.net/?mypy=latest&python=3.12&gist=130fad37723b5d2d4685e6b2fadabe6a
     """
     return staticmethod(f)
 
