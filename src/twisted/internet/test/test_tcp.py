@@ -1031,7 +1031,7 @@ class _ExhaustsFileDescriptors:
         Open file descriptors until C{EMFILE} is reached.
         """
         # Force a collection to close dangling files.
-        if self._sourceCache is None:
+        if self._sourceCache is None:  # pragma: no branch
             self._sourceCache = SourceCacheForCoverage.enable()
         gc.collect()
         try:
