@@ -28,7 +28,9 @@ def test_deferred_await_unfired(benchmark):
         result = ensureDeferred(_run(deferreds))
         for i in range(20):
             deferreds[i].callback(i)
-        assert result == sum(range(20))
+        results = []
+        result.addCallback(results.append)
+        assert results[0] == sum(range(20))
 
     benchmark(go)
 
