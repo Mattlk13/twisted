@@ -983,7 +983,7 @@ class SourceCacheForCoverage:
     def enable(cls) -> SourceCacheForCoverage:
         from coverage import python
 
-        origOpen = python.open  # type:ignore[attr-defined]
+        origOpen = getattr(python, "open", open)
         self = cls(python, origOpen)
         for module in walkModules("twisted"):
             self.pathToContents[module.path] = module.path.getContents()
