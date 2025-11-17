@@ -1019,7 +1019,7 @@ class _ExhaustsFileDescriptors:
     _fileDescriptors: List[int] = attr.ib(
         default=attr.Factory(list), init=False, repr=False
     )
-    _sourceCache: SourceCacheForCoverage = attr.ib(init=False)
+    _sourceCache: SourceCacheForCoverage | None = None
 
     def exhaust(self) -> None:
         """
@@ -1060,7 +1060,9 @@ class _ExhaustsFileDescriptors:
                 if e.errno == errno.EBADF:
                     continue
                 raise
-        self._sourceCache.disable()
+        if self._sourceCache is not None:
+            self._sourceCache.disable()
+            self._sourceCache = None
 
     def count(self):
         """
