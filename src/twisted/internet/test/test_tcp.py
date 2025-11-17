@@ -983,8 +983,8 @@ class SourceCacheForCoverage:
     def enable(cls) -> SourceCacheForCoverage | None:
         try:
             from coverage import python
-        except ImportError:
-            return None
+        except ImportError:  # pragma: no cover
+            return None  # pragma: no cover
 
         origOpen = getattr(python, "open", open)
         self = cls(python, origOpen)
@@ -994,7 +994,9 @@ class SourceCacheForCoverage:
         return self
 
     def open(self, path: str, mode: str) -> BytesIO:
-        return BytesIO(self.pathToContents[path])
+        # this is called *inside* coverage, and so will not be marked as
+        # covered.
+        return BytesIO(self.pathToContents[path])  # pragma: no cover
 
     def disable(self) -> None:
         self.patchedModule.open = self.origOpen  # type:ignore[attr-defined]
