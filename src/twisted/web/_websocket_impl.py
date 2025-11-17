@@ -356,7 +356,9 @@ class _WebSocketWireProtocol(Generic[_WSP]):
     def sendBytesMessage(self, data: bytes) -> None:
         t = self.transport
         assert t is not None
-        t.write(self._wsconn.send(BytesMessage(data)))
+        # work around https://github.com/python-hyper/wsproto/pull/196 for now
+        message = BytesMessage(data)  # type:ignore[arg-type]
+        t.write(self._wsconn.send(message))
 
     def ping(self, payload: bytes = b"") -> None:
         t = self.transport
