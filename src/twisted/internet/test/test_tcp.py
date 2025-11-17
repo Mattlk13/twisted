@@ -986,7 +986,7 @@ class SourceCacheForCoverage:
         origOpen = getattr(python, "open", open)
         self = cls(python, origOpen)
         for module in walkModules("twisted"):
-            self.pathToContents[module.filePath.path] = module.filePath.getContents()
+            self.pathToContents[module.filePath.path] = module.filePath.getContent()
         python.open = self.open  # type:ignore[attr-defined]
         return self
 
