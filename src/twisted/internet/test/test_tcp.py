@@ -980,8 +980,11 @@ class SourceCacheForCoverage:
     pathToContents: dict[str, bytes] = attr.ib(default=attr.Factory(dict))
 
     @classmethod
-    def enable(cls) -> SourceCacheForCoverage:
-        from coverage import python
+    def enable(cls) -> SourceCacheForCoverage | None:
+        try:
+            from coverage import python
+        except ImportError:
+            return None
 
         origOpen = getattr(python, "open", open)
         self = cls(python, origOpen)
