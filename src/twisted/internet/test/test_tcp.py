@@ -975,6 +975,22 @@ class _IExhaustsFileDescriptors(Interface):
 
 @attr.s(auto_attribs=True)
 class SourceCacheForCoverage:
+    """
+    Per U{this upstream issue in coverage.py
+    <https://github.com/coveragepy/coveragepy/issues/2091>}, C{coverage} may
+    need to open files at any time, on any line of code, to examine the
+    relevant source file being covered.  When it does this, under conditions of
+    file-descriptor exhaustion (which we are testing in this test suite), it
+    will (obviously) fail, raising an unexpected
+    C{coverage.exceptions.NoSource} exception out of a line of code which is of
+    course not being covered by anything.
+
+    L{SourceCacheForCoverage} prevents this issue by monkey-patching
+    C{coverage.py} in order to replace the C{open} function in the relevant
+    module to pre-allocate the source code of I{every} module in the C{twisted}
+    package and return that code back without opening any files in-line.
+    """
+
     patchedModule: ModuleType
     origOpen: Callable[..., Any]
     pathToContents: dict[str, bytes] = attr.ib(default=attr.Factory(dict))
