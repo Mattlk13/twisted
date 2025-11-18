@@ -725,8 +725,8 @@ class TLSMemoryBIOFactory(WrappingFactory):
     """
     L{TLSMemoryBIOFactory} adds TLS to connections.
 
-    @ivar _creatorCallable: A callable for creating a L{Connection} from a
-        L{TLSMemoryBIOProtocol}.
+    @ivar _creatorCallable: A callable for creating an
+        L{OpenSSL.SSL.Connection} from a L{TLSMemoryBIOProtocol}.
     """
 
     protocol: type[TLSMemoryBIOProtocol] = BufferingTLSTransport

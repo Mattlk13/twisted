@@ -2597,7 +2597,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             L{HTTPChannel} from a custom data source, call C{dataReceived} on
             it directly.
 
-        @see: L{LineReceive.rawDataReceived}
+        @see: L{LineReceiver.rawDataReceived}
         """
         if self._handlingRequest:
             self._dataBuffer.append(data)

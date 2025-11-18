@@ -274,7 +274,7 @@ class PEMObjects:
 
     def inferDomainMapping(self) -> Dict[str, CertificateOptions]:
         """
-        Return a mapping of DNS name to L{OpenSSLCertificateOptions}.
+        Return a mapping of DNS name to L{CertificateOptions}.
         """
 
         privateCerts = []

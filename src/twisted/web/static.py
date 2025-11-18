@@ -282,8 +282,7 @@ class File(resource.Resource, filepath.FilePath[str]):
         If this L{File}"s path refers to a directory, return a L{File}
         referring to the file named C{path} in that directory.
 
-        If C{path} is the empty string, return a L{DirectoryLister}
-        instead.
+        If C{path} is the empty string, return a L{DirectoryLister} instead.
 
         @param path: The current path segment.
         @type path: L{bytes}
@@ -291,9 +290,9 @@ class File(resource.Resource, filepath.FilePath[str]):
         @param request: The incoming request.
         @type request: An that provides L{twisted.web.iweb.IRequest}.
 
-        @return: A resource representing the requested file or
-            directory, or L{NoResource} if the path cannot be
-            accessed.
+        @return: A resource representing the requested file or directory, or a
+            resource returning a NOT_FOUND error to clients if the path cannot
+            be accessed.
         @rtype: An object that provides L{resource.IResource}.
         """
         if isinstance(path, bytes):

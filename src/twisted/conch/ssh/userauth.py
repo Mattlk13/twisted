@@ -322,19 +322,21 @@ class SSHUserAuthServer(service.SSHService):
     def _wrapMessageWithSKMetadata(signature, messageToBeValidated, application):
         """
         Wraps the SSH user auth message request with security key information.
-        This blob will be verified against the signature.
-        See https://github.com/openssh/openssh-portable/blob/a4aa090a3d40dddb07d5ebebc501f6457541a501/PROTOCOL.u2f#L176
+        This blob will be verified against the signature.  See
+        U{https://github.com/openssh/openssh-portable/blob/a4aa090a3d40dddb07d5ebebc501f6457541a501/PROTOCOL.u2f#L176}
 
         In addition to the message to be signed, the U2F signature operation
-        requires the key handle and a few additional parameters. The signature
-        is signed over a blob that consists of:
+        requires the key handle and a few additional parameters.  The signature
+        is signed over a blob that consists of::
+
             byte[32]	SHA256(application)
             byte		flags (including "user present", extensions present)
             uint32		counter
             byte[]		extensions
             byte[32]	SHA256(message)
 
-            The signature format used on the wire in SSH2_USERAUTH_REQUEST:
+        The signature format used on the wire in SSH2_USERAUTH_REQUEST::
+
             string		"sk-ecdsa-sha2-nistp256@openssh.com" or "sk-ssh-ed25519@openssh.com"
             string		signature
             byte		flags

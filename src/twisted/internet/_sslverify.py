@@ -1553,7 +1553,7 @@ class OpenSSLCertificateOptions:
     def getContext(self) -> SSL.Context:
         """
         Create and cache an L{SSL.Context} based on the parameters in this
-        L{OpenSSLCertificateOptions}.
+        L{twisted.internet.ssl.CertificateOptions}.
 
         This is deprecated because it returns a cached, shared context which
         cannot safely be shared, because the acceptable protocols may be
