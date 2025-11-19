@@ -1247,7 +1247,7 @@ class ProxyAgent(_AgentBase):
 
 class _FakeStdlibRequest(_RequestBase):
     """
-    A fake L{urllib.request.Request} object for L{cookiejar} to work with.
+    A fake L{urllib.request.Request} object for L{http.cookiejar} to work with.
 
     @see: U{urllib.request.Request
         <https://docs.python.org/3/library/urllib.request.html#urllib.request.Request>}
@@ -1328,7 +1328,7 @@ class _FakeUrllibResponseInfo(_InfoType):
 
 class _FakeStdlibResponse(_ResponseBase):
     """
-    A fake L{urllib.response.Response} object for L{http.cookiejar} to work
+    A fake L{urllib.response.addinfourl} object for L{http.cookiejar} to work
     with.
 
     @ivar response: Underlying Twisted Web response.

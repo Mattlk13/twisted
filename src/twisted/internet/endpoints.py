@@ -18,13 +18,27 @@ import os
 import re
 import socket
 import warnings
-from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Iterable,
+    List,
+    Optional,
+    Protocol as TypingProtocol,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer
 
 from constantly import NamedConstant, Names
 from incremental import Version
+from typing_extensions import ParamSpec
 
 from twisted.internet import defer, error, fdesc, interfaces, threads
 from twisted.internet.abstract import isIPv6Address
@@ -116,6 +130,33 @@ __all__ = [
     "wrapServerTLS",
     "wrapClientTLS",
 ]
+
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+class _DeferToThreadFunction(TypingProtocol):
+    def __call__(
+        self, f: Callable[_P, _R], *args: _P.args, **kwds: _P.kwargs
+    ) -> defer.Deferred[_R]:
+        ...
+
+
+def _staticmethod(f: Callable[_P, _R]) -> Callable[_P, _R]:
+    """
+    Wraps generic function as a staticmethod while preserving its signature for mypy.
+
+    Mypy cannot correctly infer the type when a generic function is directly passed to
+    staticmethod, resulting in an incorrect type annotation like 'staticmethod[Never, Never]'.
+
+    This helper function ensures that mypy understands resulting type as a Callable
+    with the same signature as original function.
+
+    See follow example on mypy playground to test if the workaround is still necessary:
+    https://mypy-play.net/?mypy=latest&python=3.12&gist=130fad37723b5d2d4685e6b2fadabe6a
+    """
+    return staticmethod(f)
 
 
 class _WrappingProtocol(Protocol):
@@ -651,7 +692,9 @@ class TCP6ClientEndpoint:
     """
 
     _getaddrinfo = staticmethod(socket.getaddrinfo)
-    _deferToThread = staticmethod(threads.deferToThread)
+    _deferToThread: ClassVar[_DeferToThreadFunction] = _staticmethod(
+        threads.deferToThread
+    )
     _GAI_ADDRESS = 4
     _GAI_ADDRESS_HOST = 0
 
@@ -827,7 +870,9 @@ class HostnameEndpoint:
     """
 
     _getaddrinfo = staticmethod(socket.getaddrinfo)
-    _deferToThread = staticmethod(threads.deferToThread)
+    _deferToThread: ClassVar[_DeferToThreadFunction] = _staticmethod(
+        threads.deferToThread
+    )
     _DEFAULT_ATTEMPT_DELAY = 0.3
 
     def __init__(

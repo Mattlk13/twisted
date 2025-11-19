@@ -214,7 +214,7 @@ class WorkerReporter(TestResult):
 
     def _call(self, f: Callable[[], T]) -> None:
         """
-        Call L{f} if and only if a "result reporting" context is active.
+        Call C{f} if and only if a "result reporting" context is active.
 
         @param f: A function to call.  Its result is accumulated into the
             result reporting context.  It may return a L{Deferred} or a

@@ -173,7 +173,7 @@ def keycall(key: str, getter: Callable[[str], Any]) -> PotentialCallWrapper:
     of C{get} first, before wrapping it up.
 
     @param key: The last dotted segment of a formatting key, as parsed by
-        L{Formatter.vformat}, which may end in C{()}.
+        L{string.Formatter.vformat}, which may end in C{()}.
 
     @param getter: A function which takes a string and returns some other
         object, to be formatted and stringified for a log.

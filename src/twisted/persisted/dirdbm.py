@@ -258,7 +258,7 @@ class DirDBM:
         Add all the key/value pairs in L{dict} to this dirdbm.  Any conflicting
         keys will be overwritten with the values from L{dict}.
 
-        @param dict: A mapping of key/value pairs to add to this dirdbm.
+        @param other: A mapping of key/value pairs to add to this dirdbm.
         """
         for key, val in other.items():
             self[key] = val

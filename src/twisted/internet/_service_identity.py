@@ -1,9 +1,12 @@
 """
-Conditional imports to enable support for the L{service_identity} module back
+Conditional imports to enable support for the C{service_identity} module back
 to version 18.1.0.
 """
 
-from service_identity import VerificationError
+# imported for the benefit of pydoctor
+import service_identity
+
+VerificationError = service_identity.VerificationError
 
 try:
     __import__("service_identity.hazmat")

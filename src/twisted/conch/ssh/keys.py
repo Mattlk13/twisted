@@ -234,24 +234,25 @@ class Key:
             integer y
 
         The format of ECDSA-SHA2-* public key blob is::
+
             string 'ecdsa-sha2-[identifier]'
             integer x
             integer y
 
-            identifier is the standard NIST curve name.
+        Where 'identifier' is the standard NIST curve name.
 
         The format of an Ed25519 public key blob is::
             string 'ssh-ed25519'
             string a
 
-        The format of a sk-ecdsa-sha2-nistp256@openssh.com public key is:
+        The format of a sk-ecdsa-sha2-nistp256@openssh.com public key is::
 
             string		"sk-ecdsa-sha2-nistp256@openssh.com"
             string		curve name
             ec_point	Q
             string		application (user-specified, but typically "ssh:")
 
-        The format of a sk-ssh-ed25519@openssh.com public key is:
+        The format of a sk-ssh-ed25519@openssh.com public key is::
 
             string		"sk-ssh-ed25519@openssh.com"
             string		public key
@@ -1244,17 +1245,19 @@ class Key:
 
     def blob(self):
         """
-        Return the public key blob for this key. The blob is the
-        over-the-wire format for public keys.
+        Return the public key blob for this key.  The blob is the over-the-wire
+        format for public keys.
 
         SECSH-TRANS RFC 4253 Section 6.6.
 
         RSA keys::
+
             string 'ssh-rsa'
             integer e
             integer n
 
         DSA keys::
+
             string 'ssh-dss'
             integer p
             integer q
@@ -1262,30 +1265,33 @@ class Key:
             integer y
 
         EC keys::
+
             string 'ecdsa-sha2-[identifier]'
             integer x
             integer y
 
-            identifier is the standard NIST curve name
+        Where 'identifier' is the standard NIST curve name.
 
         Ed25519 keys::
+
             string 'ssh-ed25519'
             string a
 
-        sk-ecdsa-sha2-nistp256@openssh.com keys:
+        sk-ecdsa-sha2-nistp256@openssh.com keys::
 
             string		"sk-ecdsa-sha2-nistp256@openssh.com"
             string		curve name
             ec_point	Q
             string		application (user-specified, but typically "ssh:")
 
-        sk-ssh-ed25519@openssh.com keys:
+        sk-ssh-ed25519@openssh.com keys::
 
             string		"sk-ssh-ed25519@openssh.com"
             string		public key
             string		application (user-specified, but typically "ssh:")
 
-        The security key formats are specified at https://github.com/openssh/openssh-portable/blob/80993390bed15bbd1c348f3352e55d0db01ca0fd/PROTOCOL.u2f.
+        The security key formats are specified at
+        U{https://github.com/openssh/openssh-portable/blob/80993390bed15bbd1c348f3352e55d0db01ca0fd/PROTOCOL.u2f}.
 
         @rtype: L{bytes}
         """
