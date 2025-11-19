@@ -41,7 +41,7 @@ from twisted.trial.unittest import SkipTest, TestCase
 
 cantClickLocalNetworkPermission = (
     runtime.platform.isMacOSX()
-    and float(mac_ver()[0]) > 15
+    and int(mac_ver()[0].split(".")[0]) >= 15
     and (
         # Can't run in CI
         os.environ.get("CI", "").lower() == "true"
