@@ -466,7 +466,7 @@ class MulticastPort(MulticastMixin, Port):
     def createInternetSocket(self) -> socket.socket:
         """
         Override L{Port.createInternetSocket} to configure the socket to honor
-        the C{listenMultiple} argument to L{IReactorMulticast.listenMultiple}.
+        the C{listenMultiple} argument to L{IReactorMulticast.listenMulticast}.
         """
         skt = Port.createInternetSocket(self)
         if self.listenMultiple:

@@ -57,11 +57,27 @@ except ImportError:
         pass
 
 
-if platformType == "win32":
+if platformType != "win32":
+    from errno import (
+        EAGAIN,
+        EALREADY,
+        ECONNABORTED,
+        EINPROGRESS,
+        EINVAL,
+        EISCONN,
+        EMFILE,
+        ENFILE,
+        ENOBUFS,
+        ENOMEM,
+        EPERM,
+        EWOULDBLOCK,
+    )
+    from os import strerror
+else:
     # no such thing as WSAEPERM or error code 10001
     # according to winsock.h or MSDN
-    EPERM = object()
-    from errno import (  # type: ignore[attr-defined]
+    EPERM = object()  # type:ignore[assignment]
+    from errno import (  # type: ignore[no-redef,attr-defined]
         WSAEALREADY as EALREADY,
         WSAEINPROGRESS as EINPROGRESS,
         WSAEINVAL as EINVAL,
@@ -72,28 +88,13 @@ if platformType == "win32":
     )
 
     # No such thing as WSAENFILE, either.
-    ENFILE = object()
+    ENFILE = object()  # type:ignore[assignment]
     # Nor ENOMEM
-    ENOMEM = object()
+    ENOMEM = object()  # type:ignore[assignment]
     EAGAIN = EWOULDBLOCK
-    from errno import WSAECONNRESET as ECONNABORTED  # type: ignore[attr-defined]
+    from errno import WSAECONNRESET as ECONNABORTED  # type: ignore[no-redef,attr-defined]
 
     from twisted.python.win32 import formatError as strerror
-else:
-    from errno import EPERM
-    from errno import EINVAL
-    from errno import EWOULDBLOCK
-    from errno import EINPROGRESS
-    from errno import EALREADY
-    from errno import EISCONN
-    from errno import ENOBUFS
-    from errno import EMFILE
-    from errno import ENFILE
-    from errno import ENOMEM
-    from errno import EAGAIN
-    from errno import ECONNABORTED
-
-    from os import strerror
 
 from errno import errorcode
 

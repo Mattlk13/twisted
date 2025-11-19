@@ -1006,7 +1006,7 @@ class SourceCacheForCoverage:
         self = cls(python, origOpen)
         for module in walkModules("twisted"):
             self.pathToContents[module.filePath.path] = module.filePath.getContent()
-        python.open = self.open  # type:ignore[attr-defined]
+        python.open = self.open  # type:ignore[assignment]
         return self
 
     def open(self, path: str, mode: str) -> BytesIO:

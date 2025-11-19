@@ -63,7 +63,7 @@ class H2Connection(Protocol, TimeoutMixin):
     interface between the two objects that allows them to work hand-in-hand here.
 
     @ivar conn: The HTTP/2 connection state machine.
-    @type conn: L{h2.connection.H2Connection}
+    @type conn: C{h2.connection.H2Connection}
 
     @ivar streams: A mapping of stream IDs to L{H2Stream} objects, used to call
         specific methods on streams when events occur.
@@ -437,7 +437,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             received request.
-        @type event: L{h2.events.RequestReceived}
+        @type event: C{h2.events.RequestReceived}
         """
         stream = H2Stream(
             event.stream_id,
@@ -469,7 +469,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             received data.
-        @type event: L{h2.events.DataReceived}
+        @type event: C{h2.events.DataReceived}
         """
         stream = self.streams[event.stream_id]
         stream.receiveDataChunk(event.data, event.flow_controlled_length)
@@ -481,7 +481,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             completed stream.
-        @type event: L{h2.events.StreamEnded}
+        @type event: C{h2.events.StreamEnded}
         """
         stream = self.streams[event.stream_id]
         stream.requestComplete()
@@ -492,7 +492,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             reset stream.
-        @type event: L{h2.events.StreamReset}
+        @type event: C{h2.events.StreamReset}
         """
         stream = self.streams[event.stream_id]
         stream.connectionLost(
@@ -506,7 +506,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             stream reprioritization.
-        @type event: L{h2.events.PriorityUpdated}
+        @type event: C{h2.events.PriorityUpdated}
         """
         try:
             self.priority.reprioritize(
@@ -659,7 +659,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             flow control window change.
-        @type event: L{h2.events.WindowUpdated}
+        @type event: C{h2.events.WindowUpdated}
         """
         streamID = event.stream_id
 
