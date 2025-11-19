@@ -724,7 +724,7 @@ class IAgent(Interface):
         doSomeRequests(cache)
     """
 
-    if not TYPE_CHECKING:
+    if not TYPE_CHECKING:  # pragma: no branch
 
         def __init__(self) -> None:  # type:ignore
             """
