@@ -8,8 +8,9 @@ Tools for formatting logging events.
 
 from __future__ import annotations
 
+from collections.abc import Iterator, Mapping
 from datetime import datetime as DateTime
-from typing import Any, Callable, Iterator, Mapping, Optional, Union, cast
+from typing import Any, Callable, Optional, Union, cast
 
 from constantly import NamedConstant
 
@@ -79,8 +80,8 @@ def formatUnformattableEvent(event: LogEvent, error: BaseException) -> str:
 
 
 def formatTime(
-    when: Optional[float],
-    timeFormat: Optional[str] = timeFormatRFC3339,
+    when: float | None,
+    timeFormat: str | None = timeFormatRFC3339,
     default: str = "-",
 ) -> str:
     """
@@ -113,8 +114,8 @@ def formatTime(
 
 
 def formatEventAsClassicLogText(
-    event: LogEvent, formatTime: Callable[[Optional[float]], str] = formatTime
-) -> Optional[str]:
+    event: LogEvent, formatTime: Callable[[float | None], str] = formatTime
+) -> str | None:
     """
     Format an event as a line of human-readable text for, e.g. traditional log
     file output.
@@ -189,7 +190,7 @@ def keycall(key: str, getter: Callable[[str], Any]) -> PotentialCallWrapper:
     return PotentialCallWrapper(value)
 
 
-class PotentialCallWrapper(object):
+class PotentialCallWrapper:
     """
     Object wrapper that wraps C{getattr()} so as to process call-parentheses
     C{"()"} after a dotted attribute access.
