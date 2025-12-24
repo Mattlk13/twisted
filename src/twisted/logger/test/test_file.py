@@ -5,9 +5,11 @@
 Test cases for L{twisted.logger._file}.
 """
 
+from __future__ import annotations
+
 from io import StringIO
 from types import TracebackType
-from typing import IO, Any, AnyStr, Optional, Type, cast
+from typing import IO, Any, AnyStr, cast
 
 from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
@@ -44,7 +46,7 @@ class FileLogObserverTests(TestCase):
             observer(event)
             self.assertEqual(fileHandle.getvalue(), str(event))
 
-    def _test_observeWrites(self, what: Optional[str], count: int) -> None:
+    def _test_observeWrites(self, what: str | None, count: int) -> None:
         """
         Verify that observer performs an expected number of writes when the
         formatter returns a given value.
@@ -172,13 +174,13 @@ class DummyFile:
         """
         self.flushes += 1
 
-    def __enter__(self) -> "DummyFile":
+    def __enter__(self) -> DummyFile:
         return self
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
-    ) -> Optional[bool]:
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> bool | None:
         pass
