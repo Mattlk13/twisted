@@ -9,12 +9,14 @@ from typing import TYPE_CHECKING, Any
 
 from zope.interface import Interface
 
+from typing_extensions import TypeAlias
+
 if TYPE_CHECKING:
     from ._logger import Logger
 
 
-LogEvent = dict[str, Any]
-LogTrace = list[tuple["Logger", "ILogObserver"]]
+LogEvent: TypeAlias = dict[str, Any]
+LogTrace: TypeAlias = list[tuple["Logger", "ILogObserver"]]
 
 
 class ILogObserver(Interface):
