@@ -7,7 +7,7 @@ Test cases for L{twisted.logger._file}.
 
 from __future__ import annotations
 
-from io import StringIO
+from io import BytesIO, StringIO
 from types import TracebackType
 from typing import IO, Any, AnyStr, cast
 
@@ -35,6 +35,17 @@ class FileLogObserverTests(TestCase):
                 verifyObject(ILogObserver, observer)
             except BrokenMethodImplementation as e:
                 self.fail(e)
+
+    def test_observeWritesBytes(self) -> None:
+        """
+        L{FileLogObserver} encodes text as UTF-8 when the output file is binary.
+        """
+        with BytesIO() as fileHandle:
+            observer = FileLogObserver(fileHandle, lambda _: "Hello World")
+            self.assertEqual(observer._encoding, "utf-8")
+            event = dict(x=1)
+            observer(event)
+            self.assertEqual(fileHandle.getvalue(), "Hello World".encode("utf-8"))
 
     def test_observeWrites(self) -> None:
         """
