@@ -28,7 +28,6 @@ from twisted.python.deprecate import (
     _getDeprecationDocstring,
     _getDeprecationWarningString,
     _mutuallyExclusiveArguments,
-    _passedArgSpec,
     _passedSignature,
     deprecated,
     deprecatedKeywordParameter,
@@ -1015,15 +1014,10 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
 
         @param kw: The keyword arguments which could be passed to C{func}.
 
-        @return: L{_passedSignature} or L{_passedArgSpec}'s return value
+        @return: L{_passedSignature}'s return value
         @rtype: L{dict}
         """
-        if getattr(inspect, "signature", None):
-            # Python 3
-            return _passedSignature(inspect.signature(func), args, kw)
-        else:
-            # Python 2
-            return _passedArgSpec(inspect.getargspec(func), args, kw)
+        return _passedSignature(inspect.signature(func), args, kw)
 
     def test_passed_simplePositional(self):
         """
