@@ -4,13 +4,14 @@
 """
 Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 """
-
+from __future__ import annotations
 
 import inspect
 import sys
 import types
 import warnings
 from os.path import normcase
+from typing import Callable
 from warnings import catch_warnings, simplefilter
 
 try:
@@ -19,6 +20,7 @@ except ImportError:
     invalidate_caches = None  # type: ignore[assignment]
 
 from incremental import Version
+from typing_extensions import ParamSpec
 
 from twisted.python import deprecate
 from twisted.python.deprecate import (
@@ -40,27 +42,27 @@ from twisted.python.test import deprecatedattributes
 from twisted.python.test.modules_helpers import TwistedModulesMixin
 from twisted.trial.unittest import SynchronousTestCase
 
+_P = ParamSpec("_P")
+
 # Note that various tests in this module require manual encoding of paths to
 # utf-8. This can be fixed once FilePath supports Unicode; see #2366, #4736,
 # #5203.
 
 
-def checkPassed(func, *args, **kw):
+def checkPassed(
+    func: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
+) -> dict[str, object]:
     """
     Test an invocation of L{passed} with the given function, arguments, and
     keyword arguments.
 
     @param func: A function whose argspec to pass to L{_passed}.
-    @type func: A callable.
-
     @param args: The arguments which could be passed to L{func}.
-
-    @param kw: The keyword arguments which could be passed to L{func}.
+    @param kwargs: The keyword arguments which could be passed to L{func}.
 
     @return: L{_passed}'s return value
-    @rtype: L{dict}
     """
-    return _passedSignature(inspect.signature(func), args, kw)
+    return _passedSignature(inspect.signature(func), args, kwargs)
 
 
 class _MockDeprecatedAttribute:
