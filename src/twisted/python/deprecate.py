@@ -628,33 +628,32 @@ def warnAboutFunction(offender, warningString):
     )
 
 
-def _passedSignature(signature, positional, keyword):
+def _passedSignature(
+    signature: inspect.Signature,
+    positional: tuple[object, ...],
+    keyword: dict[str, object],
+) -> dict[str, object]:
     """
     Take an L{inspect.Signature}, a tuple of positional arguments, and a dict of
     keyword arguments, and return a mapping of arguments that were actually
     passed to their passed values.
 
     @param signature: The signature of the function to inspect.
-    @type signature: L{inspect.Signature}
-
     @param positional: The positional arguments that were passed.
-    @type positional: L{tuple}
-
     @param keyword: The keyword arguments that were passed.
-    @type keyword: L{dict}
 
     @return: A dictionary mapping argument names (those declared in
         C{signature}) to values that were passed explicitly by the user.
-    @rtype: L{dict} mapping L{str} to L{object}
     """
-    result = {}
-    kwargs = None
-    numPositional = 0
+    result: dict[str, object] = {}
+    kwargs: dict[str, object] | None = None
+    numPositional: int = 0
     for n, (name, param) in enumerate(signature.parameters.items()):
         if param.kind == inspect.Parameter.VAR_POSITIONAL:
             # Varargs, for example: *args
-            result[name] = positional[n:]
-            numPositional = len(result[name]) + 1
+            varargs: tuple[object, ...] = positional[n:]
+            result[name] = varargs
+            numPositional = len(varargs) + 1
         elif param.kind == inspect.Parameter.VAR_KEYWORD:
             # Variable keyword args, for example: **my_kwargs
             kwargs = result[name] = {}
