@@ -6,8 +6,11 @@
 File-like object that logs.
 """
 
+from __future__ import annotations
+
 import sys
-from typing import AnyStr, Iterable, Optional
+from collections.abc import Iterable
+from typing import AnyStr
 
 from constantly import NamedConstant
 from incremental import Version
@@ -42,7 +45,7 @@ class LoggingFile:
         self,
         logger: Logger,
         level: NamedConstant = LogLevel.info,
-        encoding: Optional[str] = None,
+        encoding: str | None = None,
     ) -> None:
         """
         @param logger: the logger to log through.
