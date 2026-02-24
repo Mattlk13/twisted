@@ -101,7 +101,7 @@ class TestResult(pyunit.TestResult):
         tuple[itrial.ITestCase | pyunit.TestCase, str | Failure]
     ]  # type:ignore[assignment]
     skips: List[Tuple[itrial.ITestCase, str]]
-    expectedFailures: List[Tuple[itrial.ITestCase, str, "Todo"]]  # type: ignore[assignment]
+    expectedFailures: List[Tuple[itrial.ITestCase, str | Failure, "Todo"]]  # type: ignore[assignment]
     unexpectedSuccesses: List[Tuple[itrial.ITestCase, str]]  # type: ignore[assignment]
     successes: int
     _testStarted: Optional[int]

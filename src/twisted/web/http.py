@@ -3381,7 +3381,7 @@ class HTTPFactory(protocol.ServerFactory[_GenericHTTPChannelProtocol]):
             reactor.
         """
         if reactor is None:
-            from twisted.internet import reactor  # type:ignore[assignment]
+            from twisted.internet import reactor
         self.reactor: IReactorTime = reactor  # type:ignore[assignment]
 
         if logPath is not None:
@@ -3418,7 +3418,7 @@ class HTTPFactory(protocol.ServerFactory[_GenericHTTPChannelProtocol]):
     def _set_logFile(self, newLogFile: BufferedIOBase | _MinimalLogFile) -> None:
         if isinstance(newLogFile, BufferedIOBase):
             newLogFile = TextIOWrapper(
-                newLogFile,  # type:ignore[arg-type]
+                newLogFile,  # type:ignore[type-var]
                 "utf-8",
                 write_through=True,
                 newline="\n",

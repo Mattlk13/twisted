@@ -636,13 +636,13 @@ class FileObserverTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase)
         log.msg("Hello!")
         self.assertIn("Hello!", fakeFile.getvalue())
         self.assertIsInstance(sys.stdout, LoggingFile)
-        self.assertEqual(sys.stdout.level, NewLogLevel.info)  # type: ignore[attr-defined]
+        self.assertEqual(sys.stdout.level, NewLogLevel.info)  # type: ignore[union-attr]
         encoding = getattr(origStdout, "encoding", None)
         if not encoding:
             encoding = sys.getdefaultencoding()
         self.assertEqual(sys.stdout.encoding.upper(), encoding.upper())
         self.assertIsInstance(sys.stderr, LoggingFile)
-        self.assertEqual(sys.stderr.level, NewLogLevel.error)  # type: ignore[attr-defined]
+        self.assertEqual(sys.stderr.level, NewLogLevel.error)  # type: ignore[union-attr]
         encoding = getattr(origStderr, "encoding", None)
         if not encoding:
             encoding = sys.getdefaultencoding()
@@ -662,7 +662,9 @@ class FileObserverTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase)
 
         def showError(eventDict: log.EventDict) -> None:
             if eventDict["isError"]:
-                sys.__stdout__.write(eventDict["failure"].getTraceback())
+                sys.__stdout__.write(
+                    eventDict["failure"].getTraceback()
+                )  # type:ignore[union-attr]
 
         log.addObserver(showError)
         self.addCleanup(log.removeObserver, showError)
@@ -1000,7 +1002,7 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         When StdioOnnaStick is set as sys.stdout, prints become log messages.
         """
         oldStdout = sys.stdout
-        sys.stdout = log.StdioOnnaStick()  # type: ignore[assignment]
+        sys.stdout = log.StdioOnnaStick()
         self.addCleanup(setattr, sys, "stdout", oldStdout)
         print("This", end=" ")
         print("is a test")
@@ -1027,7 +1029,7 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         stdio.write(unicodeString + "\n")
         stdio.writelines(["Also, " + unicodeString])
         oldStdout = sys.stdout
-        sys.stdout = stdio  # type: ignore[assignment]
+        sys.stdout = stdio
         self.addCleanup(setattr, sys, "stdout", oldStdout)
         # This should go to the log, utf-8 encoded too:
         print(unicodeString)

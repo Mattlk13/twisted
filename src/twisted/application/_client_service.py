@@ -45,7 +45,8 @@ def _maybeGlobalReactor(maybeReactor: Optional[T]) -> T:
     if maybeReactor is None:
         from twisted.internet import reactor
 
-        return reactor  # type:ignore[return-value]
+        result: T = reactor
+        return result
     else:
         return maybeReactor
 

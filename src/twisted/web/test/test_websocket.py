@@ -93,7 +93,7 @@ else:
         def connectionLost(self, reason: Failure) -> None:
             self.wasLost = reason
 
-        def bytesMessageReceived(self, data: bytes) -> None:
+        def bytesMessageReceived(self, data: bytes | bytearray) -> None:
             if data == b"request":
                 self.transport.sendBytesMessage(b"\x00resp\x01onse\xff")
             else:

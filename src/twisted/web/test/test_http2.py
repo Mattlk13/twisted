@@ -2942,7 +2942,7 @@ class EndToEndTests(unittest.TestCase):
         _, serverCert = certificatesForAuthorityAndServer("test.local")
         resource = Data(b"hello world", "application/octet-stream")
         resource.isLeaf = True
-        port = reactor.listenSSL(0, Site(resource), serverCert.options())  # type: ignore[attr-defined]
+        port = reactor.listenSSL(0, Site(resource), serverCert.options())
         portNum = port.getHost().port
         self.addCleanup(port.stopListening)
 

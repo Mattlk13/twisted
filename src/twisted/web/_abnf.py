@@ -42,7 +42,7 @@ def _decint(data: bytes) -> int:
     return int(data)
 
 
-def _ishexdigits(b: bytes) -> bool:
+def _ishexdigits(b: bytes | bytearray) -> bool:
     """
     Is the string case-insensitively hexidecimal?
 
@@ -55,7 +55,7 @@ def _ishexdigits(b: bytes) -> bool:
     return b != b""
 
 
-def _hexint(b: bytes) -> int:
+def _hexint(b: bytes | bytearray) -> int:
     """
     Decode a hexadecimal integer.
 

@@ -12,7 +12,7 @@ from inspect import iscoroutine
 from io import BytesIO
 from sys import exc_info
 from traceback import extract_tb
-from types import GeneratorType
+from types import FrameType, GeneratorType
 from typing import (
     Any,
     Callable,
@@ -429,8 +429,12 @@ async def _flattenTree(
         except Exception as e:
             roots = []
             for generator in stack:
-                if generator.gi_frame is not None:
-                    roots.append(generator.gi_frame.f_locals["root"])
+                generatorFrame: FrameType = (
+                    # FIXME: typeshed bug?
+                    generator.gi_frame  # type:ignore[attr-defined]
+                )
+                if generatorFrame is not None:
+                    roots.append(generatorFrame.f_locals["root"])
             stack.pop()
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
