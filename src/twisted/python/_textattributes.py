@@ -85,7 +85,7 @@ class _NormalAttr(_Attribute):
     A text attribute for normal text.
     """
 
-    def serialize(self, write, attrs, attributeRenderer):
+    def serialize(self, write, attrs=None, attributeRenderer="toVT102"):
         attrs.__init__()
         _Attribute.serialize(self, write, attrs, attributeRenderer)
 
