@@ -115,7 +115,7 @@ class _OtherAttr(_Attribute):
         result.children.extend(self.children)
         return result
 
-    def serialize(self, write, attrs, attributeRenderer):
+    def serialize(self, write, attrs=None, attributeRenderer="toVT102"):
         attrs = attrs._withAttribute(self.attrname, self.attrvalue)
         _Attribute.serialize(self, write, attrs, attributeRenderer)
 
@@ -136,7 +136,7 @@ class _ColorAttr(_Attribute):
         self.color = color
         self.ground = ground
 
-    def serialize(self, write, attrs, attributeRenderer):
+    def serialize(self, write, attrs=None, attributeRenderer="toVT102"):
         attrs = attrs._withAttribute(self.ground, self.color)
         _Attribute.serialize(self, write, attrs, attributeRenderer)
 
