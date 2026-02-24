@@ -11,8 +11,10 @@ import sys
 import time
 import warnings
 from typing import (
+    Any,
     Callable,
     Coroutine,
+    Generic,
     Iterable,
     Iterator,
     List,
@@ -382,7 +384,7 @@ def _defaultScheduler(callable: Callable[[], None]) -> IDelayedCall:
 _TaskResultT = TypeVar("_TaskResultT")
 
 
-class CooperativeTask:
+class CooperativeTask(Generic[_TaskResultT]):
     """
     A L{CooperativeTask} is a task object inside a L{Cooperator}, which can be
     paused, resumed, and stopped.  It can also have its completion (or
@@ -411,7 +413,9 @@ class CooperativeTask:
     """
 
     def __init__(
-        self, iterator: Iterator[_TaskResultT], cooperator: "Cooperator"
+        self,
+        iterator: Iterator[_TaskResultT],
+        cooperator: "Cooperator",
     ) -> None:
         """
         A private constructor: to create a new L{CooperativeTask}, see
@@ -594,8 +598,8 @@ class Cooperator:
         stepped as soon as they are added, or if they will be queued up until
         L{Cooperator.start} is called.
         """
-        self._tasks: List[CooperativeTask] = []
-        self._metarator: Iterator[CooperativeTask] = iter(())
+        self._tasks: List[CooperativeTask[object]] = []
+        self._metarator: Iterator[CooperativeTask[object]] = iter(())
         self._terminationPredicateFactory = terminationPredicateFactory
         self._scheduler = scheduler
         self._delayedCall: Optional[IDelayedCall] = None
@@ -628,7 +632,9 @@ class Cooperator:
         whenDone.chainDeferred(doneDeferred)
         return doneDeferred
 
-    def cooperate(self, iterator: Iterator[_TaskResultT]) -> CooperativeTask:
+    def cooperate(
+        self, iterator: Iterator[_TaskResultT]
+    ) -> CooperativeTask[_TaskResultT]:
         """
         Start running the given iterator as a long-running cooperative task, by
         calling next() on it as a periodic timed event.
@@ -639,7 +645,7 @@ class Cooperator:
         """
         return CooperativeTask(iterator, self)
 
-    def _addTask(self, task: CooperativeTask) -> None:
+    def _addTask(self, task: CooperativeTask[Any]) -> None:
         """
         Add a L{CooperativeTask} object to this L{Cooperator}.
         """
@@ -651,7 +657,7 @@ class Cooperator:
             self._tasks.append(task)
             self._reschedule()
 
-    def _removeTask(self, task: CooperativeTask) -> None:
+    def _removeTask(self, task: CooperativeTask[Any]) -> None:
         """
         Remove a L{CooperativeTask} from this L{Cooperator}.
         """
@@ -661,7 +667,7 @@ class Cooperator:
             self._delayedCall.cancel()
             self._delayedCall = None
 
-    def _tasksWhileNotStopped(self) -> Iterable[CooperativeTask]:
+    def _tasksWhileNotStopped(self) -> Iterable[CooperativeTask[object]]:
         """
         Yield all L{CooperativeTask} objects in a loop as long as this
         L{Cooperator}'s termination condition has not been met.
@@ -742,7 +748,7 @@ def coiterate(iterator: Iterator[_T]) -> Deferred[Iterator[_T]]:
     return _theCooperator.coiterate(iterator)
 
 
-def cooperate(iterator: Iterator[_T]) -> CooperativeTask:
+def cooperate(iterator: Iterator[_T]) -> CooperativeTask[_T]:
     """
     Start running the given iterator as a long-running cooperative task, by
     calling next() on it as a periodic timed event.

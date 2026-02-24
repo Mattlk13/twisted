@@ -278,7 +278,7 @@ async def runTests(
 ) -> None:
     try:
         # Run the tests using the worker pool.
-        await pool.run(partial(driveWorker, result, testCases))
+        await pool.run(partial(driveWorker, result, list(testCases)))
     except Exception:
         # Exceptions from test code are handled somewhere else.  An
         # exception here is a bug in the runner itself.  The only

@@ -28,13 +28,14 @@ toStdlibLogLevelMapping: Mapping[NamedConstant, int] = {
 }
 
 
-def _reverseLogLevelMapping() -> Mapping[int, NamedConstant]:
+def _reverseLogLevelMapping() -> Mapping[str | int, NamedConstant]:
     """
     Reverse the above mapping, adding both the numerical keys used above and
     the corresponding string keys also used by python logging.
+
     @return: the reversed mapping
     """
-    mapping = {}
+    mapping: dict[str | int, NamedConstant] = {}
     for logLevel, pyLogLevel in toStdlibLogLevelMapping.items():
         mapping[pyLogLevel] = logLevel
         mapping[stdlibLogging.getLevelName(pyLogLevel)] = logLevel

@@ -662,9 +662,9 @@ class FileObserverTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase)
 
         def showError(eventDict: log.EventDict) -> None:
             if eventDict["isError"]:
-                sys.__stdout__.write(
+                sys.__stdout__.write(  # type:ignore[union-attr]
                     eventDict["failure"].getTraceback()
-                )  # type:ignore[union-attr]
+                )
 
         log.addObserver(showError)
         self.addCleanup(log.removeObserver, showError)

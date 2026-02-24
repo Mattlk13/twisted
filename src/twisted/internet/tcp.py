@@ -15,7 +15,7 @@ import socket
 import struct
 import sys
 import typing
-from typing import Any, Callable, ClassVar, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Union
 
 from zope.interface import Interface, implementer
 
@@ -73,7 +73,7 @@ if platformType != "win32":
         EWOULDBLOCK,
     )
     from os import strerror
-else:
+elif not TYPE_CHECKING:
     # no such thing as WSAEPERM or error code 10001
     # according to winsock.h or MSDN
     EPERM = object()  # type:ignore[assignment]

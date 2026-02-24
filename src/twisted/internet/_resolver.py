@@ -20,17 +20,7 @@ from socket import (
     gaierror,
     getaddrinfo,
 )
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-    List,
-    NoReturn,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import TYPE_CHECKING, Callable, NoReturn, Optional, Protocol, Sequence, Type
 
 from zope.interface import implementer
 
@@ -95,15 +85,28 @@ _socktypeToType = {
 }
 
 
-_GETADDRINFO_RESULT = List[
-    Tuple[
+_GETADDRINFO_RESULT = list[
+    tuple[
         AddressFamily,
         SocketKind,
         int,
         str,
-        Union[Tuple[str, int], Tuple[str, int, int, int]],
+        tuple[str, int] | tuple[str, int, int, int] | tuple[int, bytes],
     ]
 ]
+
+
+class _LikeGetAddrInfo(Protocol):
+    def __call__(
+        self,
+        host: bytes | str | None,
+        port: bytes | str | int | None,
+        family: int = AF_UNSPEC,
+        type: int = 0,
+        proto: int = 0,
+        flags: int = 0,
+    ) -> _GETADDRINFO_RESULT:
+        ...
 
 
 @implementer(IHostnameResolver)
@@ -117,7 +120,7 @@ class GAIResolver:
         self,
         reactor: IReactorThreads,
         getThreadPool: Optional[Callable[[], "ThreadPool"]] = None,
-        getaddrinfo: Callable[[str, int, int, int], _GETADDRINFO_RESULT] = getaddrinfo,
+        getaddrinfo: _LikeGetAddrInfo = getaddrinfo,
     ):
         """
         Create a L{GAIResolver}.

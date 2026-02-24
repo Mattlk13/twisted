@@ -429,7 +429,7 @@ class _Assertions(pyunit.TestCase):
 
         return context._handle(lambda: f(*args, **kwargs))
 
-    failUnlessRaises = assertRaises
+    failUnlessRaises = assertRaises  # type:ignore[assignment,unused-ignore]
 
     def assertEqual(self, first, second, msg=None):
         """
