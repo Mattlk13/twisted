@@ -11,6 +11,29 @@ to use the same code for different loops, from Twisted's basic, yet portable,
 select-based loop to the loops of various GUI toolkits like GTK+ or Tk.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING
 
-reactor: Any
+if TYPE_CHECKING:
+    from .interfaces import (
+        IReactorCore,
+        IReactorFDSet,
+        IReactorProcess,
+        IReactorTCP,
+        IReactorTime,
+    )
+
+    class _IReactorCommon(
+        IReactorCore,
+        IReactorTime,
+        IReactorFDSet,
+        IReactorTCP,
+        IReactorProcess,
+    ):
+        """
+        A make-believe interface supporting all the commonly-implemented parts
+        of the reactor.  For other interfaces which may or may not be supplied
+        by the environment, i.e. IReactorSSL, adapt the reactor like
+        C{IReactorSSL(reactor)}.
+        """
+
+    reactor: _IReactorCommon

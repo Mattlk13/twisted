@@ -1152,7 +1152,8 @@ def _runReactor(callback: Callable[[], Deferred[_T]]) -> None:  # pragma: no cov
     deferred = callback()
     deferred.addErrback(errors.append)
     deferred.addBoth(lambda _: reactor.callLater(0, _stopReactor, reactor))
-    reactor.run(installSignalHandlers=False)
+    # installSignalHandlers is technically not in IReactorCore
+    reactor.run(installSignalHandlers=False)  # type:ignore[call-arg]
 
     if errors:  # pragma: no cover
         # Make sure the test fails in a visible way:

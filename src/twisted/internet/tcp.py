@@ -29,7 +29,7 @@ from twisted.internet.interfaces import (
     ISystemHandle,
     ITCPTransport,
 )
-from twisted.internet.protocol import ClientFactory
+from twisted.internet.protocol import ClientFactory, P
 from twisted.logger import ILogObserver, LogEvent, Logger
 from twisted.python import deprecate, versions
 from twisted.python.runtime import platformType
@@ -1524,7 +1524,7 @@ class Connector(base.BaseConnector):
         self,
         host: str,
         port: int | str,
-        factory: ClientFactory,
+        factory: ClientFactory[P],
         timeout: float,
         bindAddress: str | tuple[str, int] | None,
         reactor: Any = None,

@@ -125,7 +125,9 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
     """
 
     if not interfaces.IReactorProcess.providedBy(reactor):
-        skip = "CGI tests require a functional reactor.spawnProcess()"
+        skip = (  # type:ignore[unreachable]
+            "CGI tests require a functional reactor.spawnProcess()"
+        )
 
     def test_CGI(self):
         cgiFilename = self.writeCGI(DUMMY_CGI)
