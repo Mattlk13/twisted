@@ -10,3 +10,7 @@ observers need not care about which event loop is running. Thus, it is possible
 to use the same code for different loops, from Twisted's basic, yet portable,
 select-based loop to the loops of various GUI toolkits like GTK+ or Tk.
 """
+
+from typing import Any
+
+reactor: Any
