@@ -661,7 +661,10 @@ class FileObserverTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase)
         sys.stdout = StringIO()
 
         def showError(eventDict: log.EventDict) -> None:
-            if eventDict["isError"]:
+            # Exclude this from coverage because it's just for better reporting
+            # in a weird edge case.  Ideally we would cover it in a
+            # test-for-this-test but it normally shouldn't be run.
+            if eventDict["isError"]:  # pragma: no cover
                 sys.__stdout__.write(  # type:ignore[union-attr]
                     eventDict["failure"].getTraceback()
                 )
