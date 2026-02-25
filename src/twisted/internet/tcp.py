@@ -73,8 +73,11 @@ if platformType != "win32":
         EWOULDBLOCK,
     )
     from os import strerror
-elif not TYPE_CHECKING:
-    # no such thing as WSAEPERM or error code 10001
+elif not TYPE_CHECKING:  # pragma: no branch
+    # Need a coverage annotation here because we will never fall through this
+    # branch as TYPE_CHECKING is always False.
+
+    # No such thing as WSAEPERM or error code 10001
     # according to winsock.h or MSDN
     EPERM = object()  # type:ignore[assignment]
     from errno import (  # type: ignore[no-redef,attr-defined]
