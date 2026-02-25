@@ -7,7 +7,7 @@ IPv6-aware hostname resolution.
 
 @see: L{IHostnameResolver}
 """
-
+from __future__ import annotations
 
 from socket import (
     AF_INET,
