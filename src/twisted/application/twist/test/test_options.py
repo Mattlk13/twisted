@@ -5,9 +5,13 @@
 Tests for L{twisted.application.twist._options}.
 """
 
+from __future__ import annotations
+
 from sys import stderr, stdout
-from types import NotImplementedType
-from typing import Callable, Dict, List, Optional, TextIO, Tuple
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, TextIO, Tuple
+
+if TYPE_CHECKING:
+    from types import NotImplementedType
 
 import twisted.trial.unittest
 from twisted.copyright import version

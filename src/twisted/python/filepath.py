@@ -40,7 +40,6 @@ from stat import (
     S_IXOTH,
     S_IXUSR,
 )
-from types import NotImplementedType
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -60,6 +59,9 @@ from typing import (
     cast,
     overload,
 )
+
+if TYPE_CHECKING:
+    from types import NotImplementedType
 
 from zope.interface import Attribute, Interface, implementer
 
