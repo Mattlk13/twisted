@@ -273,12 +273,12 @@ async def runTests(
     testCases: Iterable[ITestCase],
     result: DistReporter,
     driveWorker: Callable[
-        [DistReporter, Sequence[ITestCase], LocalWorkerAMP], Awaitable[None]
+        [DistReporter, Iterable[ITestCase], LocalWorkerAMP], Awaitable[None]
     ],
 ) -> None:
     try:
         # Run the tests using the worker pool.
-        await pool.run(partial(driveWorker, result, list(testCases)))
+        await pool.run(partial(driveWorker, result, testCases))
     except Exception:
         # Exceptions from test code are handled somewhere else.  An
         # exception here is a bug in the runner itself.  The only
@@ -349,7 +349,7 @@ class DistTrialRunner:
     async def _driveWorker(
         self,
         result: DistReporter,
-        testCases: Sequence[ITestCase],
+        testCases: Iterable[ITestCase],
         worker: LocalWorkerAMP,
     ) -> None:
         """
