@@ -41,6 +41,15 @@ from twisted.trial.unittest import SynchronousTestCase as TestCase
 symlinkSkip = not platform._supportsSymlinks()
 
 
+@total_ordering
+class LessThanEverything:
+    def __lt__(self, other: object) -> bool:
+        return True
+
+    def __eq__(self, other: object) -> bool:
+        return False
+
+
 class BytesTestCase(TestCase):
     """
     Override default method implementations to support byte paths.
@@ -893,16 +902,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         FilePath delegates its comparison to other objects.
         """
-
-        @total_ordering
-        class CustomObject:
-            def __lt__(self, other: object) -> bool:
-                return True
-
-            def __eq__(self, other: object) -> bool:
-                return False
-
-        custom = CustomObject()
+        custom = LessThanEverything()
         self.assertFalse(filepath.FilePath("a") < custom)
         self.assertFalse(filepath.FilePath("a") == custom)
         self.assertTrue(filepath.FilePath("a") > custom)
