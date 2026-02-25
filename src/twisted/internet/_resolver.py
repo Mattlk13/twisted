@@ -85,15 +85,16 @@ _socktypeToType = {
 }
 
 
-_GETADDRINFO_RESULT = list[
-    tuple[
-        AddressFamily,
-        SocketKind,
-        int,
-        str,
-        tuple[str, int] | tuple[str, int, int, int] | tuple[int, bytes],
+if TYPE_CHECKING:
+    _GETADDRINFO_RESULT = list[
+        tuple[
+            AddressFamily,
+            SocketKind,
+            int,
+            str,
+            tuple[str, int] | tuple[str, int, int, int] | tuple[int, bytes],
+        ]
     ]
-]
 
 
 class _LikeGetAddrInfo(Protocol):
