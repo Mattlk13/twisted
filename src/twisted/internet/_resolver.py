@@ -85,19 +85,11 @@ _socktypeToType = {
 }
 
 
-if TYPE_CHECKING:
-    _GETADDRINFO_RESULT = list[
-        tuple[
-            AddressFamily,
-            SocketKind,
-            int,
-            str,
-            tuple[str, int] | tuple[str, int, int, int] | tuple[int, bytes],
-        ]
-    ]
-
-
 class _LikeGetAddrInfo(Protocol):
+    """
+    A callable matching the type signature of L{getaddrinfo}.
+    """
+
     def __call__(
         self,
         host: bytes | str | None,
@@ -106,7 +98,15 @@ class _LikeGetAddrInfo(Protocol):
         type: int = 0,
         proto: int = 0,
         flags: int = 0,
-    ) -> _GETADDRINFO_RESULT:
+    ) -> list[
+        tuple[
+            AddressFamily,
+            SocketKind,
+            int,
+            str,
+            tuple[str, int] | tuple[str, int, int, int] | tuple[int, bytes],
+        ]
+    ]:
         ...
 
 
@@ -174,27 +174,30 @@ class GAIResolver:
         ]
         socketType = _transportToSocket[transportSemantics]
 
-        def get() -> _GETADDRINFO_RESULT:
+        resolution = HostResolution(hostName)
+
+        async def resolveAndProcess() -> None:
+            resolutionReceiver.resolutionBegan(resolution)
             try:
-                return self._getaddrinfo(
-                    hostName, portNumber, addressFamily, socketType
+                names = await deferToThreadPool(
+                    self._reactor,
+                    pool,
+                    self._getaddrinfo,
+                    hostName,
+                    portNumber,
+                    addressFamily,
+                    socketType,
                 )
             except gaierror:
-                return []
-
-        d = deferToThreadPool(self._reactor, pool, get)
-        resolution = HostResolution(hostName)
-        resolutionReceiver.resolutionBegan(resolution)
-
-        @d.addCallback
-        def deliverResults(result: _GETADDRINFO_RESULT) -> None:
-            for family, socktype, proto, cannoname, sockaddr in result:
+                names = []
+            for family, socktype, proto, cannoname, sockaddr in names:
                 addrType = _afToType[family]
                 resolutionReceiver.addressResolved(
                     addrType(_socktypeToType.get(socktype, "TCP"), *sockaddr)
                 )
             resolutionReceiver.resolutionComplete()
 
+        Deferred.fromCoroutine(resolveAndProcess())
         return resolution
 
 
@@ -258,13 +261,15 @@ class SimpleResolverComplexifier:
                 )
             )
             .addErrback(
-                lambda error: None
-                if error.check(DNSLookupError)
-                else self._log.failure(
-                    "while looking up {name} with {resolver}",
-                    error,
-                    name=hostName,
-                    resolver=self._simpleResolver,
+                lambda error: (
+                    None
+                    if error.check(DNSLookupError)
+                    else self._log.failure(
+                        "while looking up {name} with {resolver}",
+                        error,
+                        name=hostName,
+                        resolver=self._simpleResolver,
+                    )
                 )
             )
             .addCallback(lambda nothing: resolutionReceiver.resolutionComplete())
