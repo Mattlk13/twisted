@@ -14,6 +14,7 @@ import pickle
 import stat
 import sys
 import time
+from functools import total_ordering
 from pprint import pformat
 from typing import (
     IO,
@@ -886,8 +887,25 @@ class FilePathTests(AbstractFilePathTests):
         self.assertTrue(filepath.FilePath(b"a") <= filepath.FilePath(b"z"))
         self.assertTrue(filepath.FilePath(b"a") != filepath.FilePath(b"z"))
         self.assertTrue(filepath.FilePath(b"z") != filepath.FilePath(b"a"))
-
         self.assertFalse(filepath.FilePath(b"z") != filepath.FilePath(b"z"))
+
+    def test_foreignComparison(self) -> None:
+        """
+        FilePath delegates its comparison to other objects.
+        """
+
+        @total_ordering
+        class CustomObject:
+            def __lt__(self, other: object) -> bool:
+                return True
+
+            def __eq__(self, other: object) -> bool:
+                return False
+
+        custom = CustomObject()
+        self.assertFalse(filepath.FilePath("a") < custom)
+        self.assertFalse(filepath.FilePath("a") == custom)
+        self.assertTrue(filepath.FilePath("a") > custom)
 
     def test_descendantOnly(self) -> None:
         """
