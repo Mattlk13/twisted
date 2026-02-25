@@ -5,6 +5,8 @@
 twisted.web.util and twisted.web.template merged to avoid cyclic deps
 """
 
+from __future__ import annotations
+
 import io
 import linecache
 import warnings
