@@ -17,7 +17,7 @@ from asyncio import AbstractEventLoop, Future, iscoroutine
 from contextvars import Context as _Context, copy_context as _copy_context
 from enum import Enum
 from functools import wraps
-from sys import exc_info, implementation
+from sys import exc_info
 from types import CoroutineType, GeneratorType, MappingProxyType, TracebackType
 from typing import (
     TYPE_CHECKING,
@@ -49,7 +49,7 @@ from typing_extensions import Concatenate, ParamSpec, Self
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
 from twisted.python import lockfile
-from twisted.python.compat import _PYPY, cmp, comparable
+from twisted.python.compat import cmp, comparable
 from twisted.python.deprecate import deprecated, deprecatedProperty, warnAboutFunction
 from twisted.python.failure import Failure, _extraneous
 
@@ -58,9 +58,6 @@ log = Logger()
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
-
-# See use in _inlineCallbacks for explanation and removal timeline.
-_oldPypyStack = _PYPY and implementation.version < (7, 3, 14)
 
 
 class AlreadyCalledError(Exception):
@@ -1877,13 +1874,6 @@ def _inlineCallbacks(
             # that this is the end of the traceback (it can effectively never
             # be).
             appCodeTrace = exc_info()[2].tb_next  # type:ignore[union-attr,assignment]
-
-            if _oldPypyStack:
-                # PyPy versions through 7.3.13 add an extra frame; 7.3.14 fixed
-                # this discrepancy with CPython.  This code can be removed once
-                # we no longer need to support PyPy 7.3.13 or older.
-                appCodeTrace = appCodeTrace.tb_next  # type:ignore[assignment]
-                assert appCodeTrace is not None
 
             if isFailure:
                 # If we invoked this generator frame by throwing an exception
