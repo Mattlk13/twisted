@@ -1347,7 +1347,7 @@ def ensureDeferred(
         Coroutine[Deferred[Any], Any, _T],
         Generator[Deferred[Any], Any, _T],
         Deferred[_T],
-    ]
+    ],
 ) -> Deferred[_T]:
     """
     Schedule the execution of a coroutine that awaits/yields from L{Deferred}s,
@@ -1871,27 +1871,25 @@ def _inlineCallbacks(
             # The traceback starts in this frame (the one for
             # _inlineCallbacks); the next one down should be the application
             # code.
-            excInfo = exc_info()
-            assert excInfo is not None
+            appCodeTrace: TracebackType
 
-            traceback = excInfo[2]
-            assert traceback is not None
-
-            appCodeTrace = traceback.tb_next
-            assert appCodeTrace is not None
+            # Here and everywhere below, we ignore the theoretical possibility
+            # that this is the end of the traceback (it can effectively never
+            # be).
+            appCodeTrace = exc_info()[2].tb_next  # type:ignore[union-attr,assignment]
 
             if _oldPypyStack:
                 # PyPy versions through 7.3.13 add an extra frame; 7.3.14 fixed
                 # this discrepancy with CPython.  This code can be removed once
                 # we no longer need to support PyPy 7.3.13 or older.
-                appCodeTrace = appCodeTrace.tb_next
+                appCodeTrace = appCodeTrace.tb_next  # type:ignore[assignment]
                 assert appCodeTrace is not None
 
             if isFailure:
                 # If we invoked this generator frame by throwing an exception
                 # into it, then throwExceptionIntoGenerator will consume an
                 # additional stack frame itself, so we need to skip that too.
-                appCodeTrace = appCodeTrace.tb_next
+                appCodeTrace = appCodeTrace.tb_next  # type:ignore[assignment]
                 assert appCodeTrace is not None
 
             # Now that we've identified the frame being exited by the
@@ -2030,7 +2028,7 @@ def _cancellableInlineCallbacks(
     gen: Union[
         Generator[Deferred[Any], object, _T],
         Coroutine[Deferred[Any], object, _T],
-    ]
+    ],
 ) -> Deferred[_T]:
     """
     Make an C{@}L{inlineCallbacks} cancellable.
@@ -2057,7 +2055,7 @@ class _InternalInlineCallbacksCancelledError(Exception):
 
 
 def inlineCallbacks(
-    f: Callable[_P, Generator[Deferred[Any], Any, _T]]
+    f: Callable[_P, Generator[Deferred[Any], Any, _T]],
 ) -> Callable[_P, Deferred[_T]]:
     """
     L{inlineCallbacks} helps you write L{Deferred}-using code that looks like a
