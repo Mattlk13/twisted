@@ -8,9 +8,10 @@ Tests for L{twisted.web.client.Agent} and related new client APIs.
 from __future__ import annotations
 
 import zlib
+from collections.abc import Sequence
 from http.cookiejar import CookieJar
 from io import BytesIO
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING
 from unittest import SkipTest, skipIf
 
 from zope.interface.declarations import implementer
@@ -122,7 +123,7 @@ class StubHTTPProtocol(Protocol):
     """
 
     def __init__(self) -> None:
-        self.requests: List[Tuple[Request, Deferred[IResponse]]] = []
+        self.requests: list[tuple[Request, Deferred[IResponse]]] = []
         self.state = "QUIESCENT"
 
     def request(self, request):
@@ -2684,7 +2685,7 @@ class _RedirectAgentTestsMixin(testMixinClass):
         crossScheme: bool = False,
         crossDomain: bool = False,
         crossPort: bool = False,
-        requestHeaders: Optional[Headers] = None,
+        requestHeaders: Headers | None = None,
     ) -> Request:
         """
         When getting a redirect, L{client.RedirectAgent} follows the URL
@@ -2792,7 +2793,7 @@ class _RedirectAgentTestsMixin(testMixinClass):
         allHeaders = Headers({**sensitiveHeaderValues, **otherHeaderValues})
         redirected = self._testRedirectDefault(301, requestHeaders=allHeaders)
 
-        def normHeaders(headers: Headers) -> Dict[bytes, Sequence[bytes]]:
+        def normHeaders(headers: Headers) -> dict[bytes, Sequence[bytes]]:
             return {k.lower(): v for (k, v) in headers.getAllRawHeaders()}
 
         sameOriginHeaders = normHeaders(redirected.headers)

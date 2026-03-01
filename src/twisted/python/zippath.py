@@ -12,20 +12,8 @@ from __future__ import annotations
 import errno
 import os
 import time
-from typing import (
-    IO,
-    TYPE_CHECKING,
-    Any,
-    AnyStr,
-    Dict,
-    Generic,
-    Iterable,
-    List,
-    Literal,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from collections.abc import Iterable
+from typing import IO, TYPE_CHECKING, Any, AnyStr, Generic, Literal, TypeVar
 from zipfile import ZipFile
 
 from zope.interface import implementer
@@ -81,7 +69,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
         archiveFilename: _ZipStr = _coerceToFilesystemEncoding(
             pathInArchive, archive._zipfileFilename
         )
-        segments: List[_ZipStr] = self.pathInArchive.split(sep)
+        segments: list[_ZipStr] = self.pathInArchive.split(sep)
         fakePath: _ZipStr = os.path.join(archiveFilename, *segments)
         self.path: _ZipStr = fakePath
 
@@ -94,7 +82,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
         )
 
     def __repr__(self) -> str:
-        parts: List[_ZipStr]
+        parts: list[_ZipStr]
         parts = [
             _coerceToFilesystemEncoding(self.sep, os.path.abspath(self.archive.path))
         ]
@@ -114,7 +102,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
 
     def _nativeParent(
         self,
-    ) -> Union[ZipPath[_ZipStr, _ArchiveStr], ZipArchive[_ArchiveStr]]:
+    ) -> ZipPath[_ZipStr, _ArchiveStr] | ZipArchive[_ArchiveStr]:
         """
         Return parent, discarding our own encoding in favor of whatever the
         archive's is.
@@ -124,7 +112,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
             return self.archive
         return ZipPath(self.archive, self.sep.join(splitup[:-1]))
 
-    def parent(self) -> Union[ZipPath[_ZipStr, _ArchiveStr], ZipArchive[_ZipStr]]:
+    def parent(self) -> ZipPath[_ZipStr, _ArchiveStr] | ZipArchive[_ZipStr]:
         parent = self._nativeParent()
         if isinstance(parent, ZipArchive):
             return ZipArchive(
@@ -136,7 +124,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
 
         def parents(
             self,
-        ) -> Iterable[Union[ZipPath[_ZipStr, _ArchiveStr], ZipArchive[_ZipStr]]]:
+        ) -> Iterable[ZipPath[_ZipStr, _ArchiveStr] | ZipArchive[_ZipStr]]:
             ...
 
     def child(self, path: OtherAnyStr) -> ZipPath[OtherAnyStr, _ArchiveStr]:
@@ -156,8 +144,8 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
         return ZipPath(self.archive, joiner.join([pathInArchive, path]))
 
     def sibling(self, path: OtherAnyStr) -> ZipPath[OtherAnyStr, _ArchiveStr]:
-        parent: Union[ZipPath[_ZipStr, _ArchiveStr], ZipArchive[_ZipStr]]
-        rightTypedParent: Union[ZipPath[_ZipStr, _ArchiveStr], ZipArchive[_ArchiveStr]]
+        parent: ZipPath[_ZipStr, _ArchiveStr] | ZipArchive[_ZipStr]
+        rightTypedParent: ZipPath[_ZipStr, _ArchiveStr] | ZipArchive[_ArchiveStr]
 
         parent = self.parent()
         rightTypedParent = self.archive if isinstance(parent, ZipArchive) else parent
@@ -176,7 +164,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
     def islink(self) -> bool:
         return False
 
-    def listdir(self) -> List[_ZipStr]:
+    def listdir(self) -> list[_ZipStr]:
         if self.exists():
             if self.isdir():
                 parentArchivePath: _ArchiveStr = _coerceToFilesystemEncoding(
@@ -193,7 +181,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
                 OSError(errno.ENOENT, "Non-existent zip entry listed")
             )
 
-    def splitext(self) -> Tuple[_ZipStr, _ZipStr]:
+    def splitext(self) -> tuple[_ZipStr, _ZipStr]:
         """
         Return a value similar to that returned by C{os.path.splitext}.
         """
@@ -297,7 +285,7 @@ class ZipArchive(ZipPath[AnyStr, AnyStr]):
         self.pathInArchive = _coerceToFilesystemEncoding(archivePathname, "")
         # zipfile is already wasting O(N) memory on cached ZipInfo instances,
         # so there's no sense in trying to do this lazily or intelligently
-        self.childmap: Dict[AnyStr, Dict[AnyStr, int]] = {}
+        self.childmap: dict[AnyStr, dict[AnyStr, int]] = {}
 
         for name in self.zipfile.namelist():
             splitName = _coerceToFilesystemEncoding(self.path, name).split(self.sep)

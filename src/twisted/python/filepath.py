@@ -12,6 +12,7 @@ import base64
 import errno
 import os
 import sys
+from collections.abc import Iterable, Sequence
 from os import listdir, stat, utime
 from os.path import (
     abspath,
@@ -46,16 +47,9 @@ from typing import (
     Any,
     AnyStr,
     Callable,
-    Dict,
     Generic,
-    Iterable,
-    List,
     Literal,
-    Optional,
-    Sequence,
-    Tuple,
     TypeVar,
-    Union,
     cast,
     overload,
 )
@@ -210,7 +204,7 @@ class IFilePath(Interface):
         @raise Exception: if the file at this file path is not a directory.
         """
 
-    def basename() -> Union[str, bytes]:
+    def basename() -> str | bytes:
         """
         Retrieve the final component of the file path's path (everything after
         the final path separator).
@@ -354,7 +348,7 @@ class AbstractFilePath(Generic[AnyStr]):
         """
         raise NotImplementedError()
 
-    def listdir(self) -> List[AnyStr]:
+    def listdir(self) -> list[AnyStr]:
         """
         Subclasses must implement this.
         """
@@ -407,7 +401,7 @@ class AbstractFilePath(Generic[AnyStr]):
         @return: an iterable of all currently-existing children of this object.
         """
         try:
-            subnames: List[AnyStr] = self.listdir()
+            subnames: list[AnyStr] = self.listdir()
         except OSError as ose:
             # Under Python 3.3 and higher on Windows, WindowsError is an
             # alias for OSError.  OSError has a winerror attribute and an
@@ -443,7 +437,7 @@ class AbstractFilePath(Generic[AnyStr]):
 
     def walk(
         self: _Self,
-        descend: Optional[Callable[[_Self], bool]] = None,
+        descend: Callable[[_Self], bool] | None = None,
     ) -> Iterable[_Self]:
         """
         Yield myself, then each of my children, and each of those children's
@@ -515,7 +509,7 @@ class AbstractFilePath(Generic[AnyStr]):
             path = path.child(name)
         return path
 
-    def segmentsFrom(self: _Self, ancestor: _Self) -> List[AnyStr]:
+    def segmentsFrom(self: _Self, ancestor: _Self) -> list[AnyStr]:
         """
         Return a list of segments between a child and its ancestor.
 
@@ -536,7 +530,7 @@ class AbstractFilePath(Generic[AnyStr]):
         # obvious fast implemenation does the right thing too
         f = self
         p: _Self = f.parent()  # type:ignore[assignment]
-        segments: List[AnyStr] = []
+        segments: list[AnyStr] = []
         while f != ancestor and p != f:
             segments[0:0] = [f.basename()]
             f = p
@@ -666,7 +660,7 @@ class Permissions(FancyEqMixin):
         return "".join([x.shorthand() for x in (self.user, self.group, self.other)])
 
 
-def _asFilesystemBytes(path: Union[bytes, str], encoding: Optional[str] = "") -> bytes:
+def _asFilesystemBytes(path: bytes | str, encoding: str | None = "") -> bytes:
     """
     Return C{path} as a string of L{bytes} suitable for use on this system's
     filesystem.
@@ -686,7 +680,7 @@ def _asFilesystemBytes(path: Union[bytes, str], encoding: Optional[str] = "") ->
         return path.encode(encoding, errors="surrogateescape")
 
 
-def _asFilesystemText(path: Union[bytes, str], encoding: Optional[str] = None) -> str:
+def _asFilesystemText(path: bytes | str, encoding: str | None = None) -> str:
     """
     Return C{path} as a string of L{unicode} suitable for use on this system's
     filesystem.
@@ -708,7 +702,7 @@ def _asFilesystemText(path: Union[bytes, str], encoding: Optional[str] = None) -
 
 
 def _coerceToFilesystemEncoding(
-    path: AnyStr, newpath: Union[bytes, str], encoding: Optional[str] = None
+    path: AnyStr, newpath: bytes | str, encoding: str | None = None
 ) -> AnyStr:
     """
     Return a C{newpath} that is suitable for joining to C{path}.
@@ -809,7 +803,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         """
         return FilePath(path)
 
-    def __getstate__(self) -> Dict[str, object]:
+    def __getstate__(self) -> dict[str, object]:
         """
         Support serialization by discarding cached L{os.stat} results and
         returning everything else.
@@ -829,7 +823,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         """
         return _coerceToFilesystemEncoding(self.path, os.sep)
 
-    def _asBytesPath(self, encoding: Optional[str] = None) -> bytes:
+    def _asBytesPath(self, encoding: str | None = None) -> bytes:
         """
         Return the path of this L{FilePath} as bytes.
 
@@ -840,7 +834,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         """
         return _asFilesystemBytes(self.path, encoding=encoding)
 
-    def _asTextPath(self, encoding: Optional[str] = None) -> str:
+    def _asTextPath(self, encoding: str | None = None) -> str:
         """
         Return the path of this L{FilePath} as text.
 
@@ -851,7 +845,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         """
         return _asFilesystemText(self.path, encoding=encoding)
 
-    def asBytesMode(self, encoding: Optional[str] = None) -> FilePath[bytes]:
+    def asBytesMode(self, encoding: str | None = None) -> FilePath[bytes]:
         """
         Return this L{FilePath} in L{bytes}-mode.
 
@@ -864,7 +858,7 @@ class FilePath(AbstractFilePath[AnyStr]):
             return self.clonePath(self._asBytesPath(encoding=encoding))
         return self
 
-    def asTextMode(self, encoding: Optional[str] = None) -> FilePath[str]:
+    def asTextMode(self, encoding: str | None = None) -> FilePath[str]:
         """
         Return this L{FilePath} in L{unicode}-mode.
 
@@ -940,9 +934,7 @@ class FilePath(AbstractFilePath[AnyStr]):
             raise InsecurePath(f"{newpath!r} is not a child of {ourPath!r}")
         return self.clonePath(newpath)
 
-    def childSearchPreauth(
-        self, *paths: OtherAnyStr
-    ) -> Optional[FilePath[OtherAnyStr]]:
+    def childSearchPreauth(self, *paths: OtherAnyStr) -> FilePath[OtherAnyStr] | None:
         """
         Return my first existing child with a name in C{paths}.
 
@@ -964,7 +956,7 @@ class FilePath(AbstractFilePath[AnyStr]):
 
     def siblingExtensionSearch(
         self, *exts: OtherAnyStr
-    ) -> Optional[FilePath[OtherAnyStr]]:
+    ) -> FilePath[OtherAnyStr] | None:
         """
         Attempt to return a path with my name, given multiple possible
         extensions.
@@ -1399,7 +1391,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         """
         return isabs(self.path)
 
-    def listdir(self) -> List[AnyStr]:
+    def listdir(self) -> list[AnyStr]:
         """
         List the base names of the direct children of this L{FilePath}.
 
@@ -1413,7 +1405,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         """
         return listdir(self.path)
 
-    def splitext(self) -> Tuple[AnyStr, AnyStr]:
+    def splitext(self) -> tuple[AnyStr, AnyStr]:
         """
         Split the file path into a pair C{(root, ext)} such that
         C{root + ext == path}.
@@ -1475,7 +1467,7 @@ class FilePath(AbstractFilePath[AnyStr]):
             ):
                 raise
 
-    def globChildren(self, pattern: OtherAnyStr) -> List[FilePath[OtherAnyStr]]:
+    def globChildren(self, pattern: OtherAnyStr) -> list[FilePath[OtherAnyStr]]:
         """
         Assuming I am representing a directory, return a list of FilePaths
         representing my children that match the given pattern.
@@ -1526,7 +1518,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         """
         return self.clonePath(self.dirname())
 
-    def setContent(self, content: bytes, ext: Union[str, bytes] = ".new") -> None:
+    def setContent(self, content: bytes, ext: str | bytes = ".new") -> None:
         """
         Replace the file at this path with a new file that contains the given
         bytes, trying to avoid data-loss in the meanwhile.
@@ -1625,13 +1617,11 @@ class FilePath(AbstractFilePath[AnyStr]):
         ...
 
     @overload
-    def temporarySibling(
-        self, extension: Optional[OtherAnyStr]
-    ) -> FilePath[OtherAnyStr]:
+    def temporarySibling(self, extension: OtherAnyStr | None) -> FilePath[OtherAnyStr]:
         ...
 
     def temporarySibling(
-        self, extension: Optional[OtherAnyStr] = None
+        self, extension: OtherAnyStr | None = None
     ) -> FilePath[OtherAnyStr]:
         """
         Construct a path referring to a sibling of this path.

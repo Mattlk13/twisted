@@ -12,10 +12,11 @@ import collections
 import os
 import warnings
 import zlib
+from collections.abc import Hashable, Iterable
 from dataclasses import dataclass
 from functools import wraps
 from http.cookiejar import CookieJar
-from typing import TYPE_CHECKING, Hashable, Iterable, Optional
+from typing import TYPE_CHECKING
 from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
 
 from zope.interface import implementer
@@ -1174,8 +1175,8 @@ class Agent(_AgentBase):
         self,
         method: bytes,
         uri: bytes,
-        headers: Optional[Headers] = None,
-        bodyProducer: Optional[IBodyProducer] = None,
+        headers: Headers | None = None,
+        bodyProducer: IBodyProducer | None = None,
     ) -> Deferred[IResponse]:
         """
         Issue a request to the server indicated by the given C{uri}.
@@ -1375,8 +1376,8 @@ class CookieAgent:
         self,
         method: bytes,
         uri: bytes,
-        headers: Optional[Headers] = None,
-        bodyProducer: Optional[IBodyProducer] = None,
+        headers: Headers | None = None,
+        bodyProducer: IBodyProducer | None = None,
     ) -> Deferred[IResponse]:
         """
         Issue a new request to the wrapped L{Agent}.
