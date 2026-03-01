@@ -94,10 +94,11 @@ __all__ = [
 
 import inspect
 import sys
+from collections.abc import Sequence
 from dis import findlinestarts
 from functools import wraps
 from types import ModuleType
-from typing import Any, Callable, Optional, Sequence, TypeVar, cast
+from typing import Any, Callable, TypeVar, cast
 from warnings import warn, warn_explicit
 
 from incremental import Version, getVersionString
@@ -728,7 +729,7 @@ _Tc = TypeVar("_Tc", bound=Callable[..., Any])
 
 
 def deprecatedKeywordParameter(
-    version: Version, name: str, replacement: Optional[str] = None
+    version: Version, name: str, replacement: str | None = None
 ) -> Callable[[_Tc], _Tc]:
     """
     Return a decorator that marks a keyword parameter of a callable

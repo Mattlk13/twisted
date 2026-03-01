@@ -10,7 +10,9 @@ Interface definitions for L{twisted.web}.
     body is not known in advance.
 """
 
-from typing import TYPE_CHECKING, Callable, List, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable
 
 from zope.interface import Attribute, Interface
 
@@ -514,7 +516,7 @@ class IRenderable(Interface):
 
     def lookupRenderMethod(
         name: str,
-    ) -> Callable[[Optional[IRequest], "Tag"], "Flattenable"]:
+    ) -> Callable[[IRequest | None, Tag], Flattenable]:
         """
         Look up and return the render method associated with the given name.
 
@@ -526,7 +528,7 @@ class IRenderable(Interface):
             was encountered.
         """
 
-    def render(request: Optional[IRequest]) -> "Flattenable":
+    def render(request: IRequest | None) -> Flattenable:
         """
         Get the document for this L{IRenderable}.
 
@@ -543,7 +545,7 @@ class ITemplateLoader(Interface):
     L{twisted.web.template.Element}'s C{loader} attribute.
     """
 
-    def load() -> List["Flattenable"]:
+    def load() -> list[Flattenable]:
         """
         Load a template suitable for rendering.
 
@@ -739,8 +741,8 @@ class IAgent(Interface):
     def request(
         method: bytes,
         uri: bytes,
-        headers: Optional[Headers] = None,
-        bodyProducer: Optional[IBodyProducer] = None,
+        headers: Headers | None = None,
+        bodyProducer: IBodyProducer | None = None,
     ) -> Deferred[IResponse]:
         """
         Request the resource at the given location.
