@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import os
 import zipfile
-from typing import Union
 
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.zippath import ZipArchive, ZipPath
@@ -62,7 +61,7 @@ class ZipFilePathTests(AbstractFilePathTests):
         Make sure that invoking ZipPath's repr prints the correct class name
         and an absolute path to the zip file.
         """
-        child: Union[ZipPath[str, bytes], ZipPath[str, str]] = self.path.child("foo")
+        child: ZipPath[str, bytes] | ZipPath[str, str] = self.path.child("foo")
         pathRepr = "ZipPath({!r})".format(
             os.path.abspath(self.nativecmn + ".zip" + os.sep + "foo"),
         )
