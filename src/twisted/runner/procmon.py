@@ -32,20 +32,15 @@ class _Process:
     The parameters of a process to be restarted.
 
     @ivar args: command-line arguments (including name of command as first one)
-    @type args: C{list}
 
     @ivar uid: user-id to run process as, or None (which means inherit uid)
-    @type uid: C{int}
 
     @ivar gid: group-id to run process as, or None (which means inherit gid)
-    @type gid: C{int}
 
     @ivar env: environment for process
-    @type env: C{dict}
 
     @ivar cwd: initial working directory for process or None
                (which means inherit cwd)
-    @type cwd: C{str}
     """
 
     args: list[str]
