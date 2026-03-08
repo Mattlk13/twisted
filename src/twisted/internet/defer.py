@@ -17,7 +17,7 @@ from asyncio import AbstractEventLoop, Future, iscoroutine
 from contextvars import Context as _Context, copy_context as _copy_context
 from enum import Enum
 from functools import wraps
-from sys import exc_info, implementation
+from sys import exc_info
 from types import CoroutineType, GeneratorType, MappingProxyType, TracebackType
 from typing import (
     TYPE_CHECKING,
@@ -49,7 +49,7 @@ from typing_extensions import Concatenate, ParamSpec, Self
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
 from twisted.python import lockfile
-from twisted.python.compat import _PYPY, cmp, comparable
+from twisted.python.compat import cmp, comparable
 from twisted.python.deprecate import deprecated, deprecatedProperty, warnAboutFunction
 from twisted.python.failure import Failure, _extraneous
 
@@ -58,9 +58,6 @@ log = Logger()
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
-
-# See use in _inlineCallbacks for explanation and removal timeline.
-_oldPypyStack = _PYPY and implementation.version < (7, 3, 14)
 
 
 class AlreadyCalledError(Exception):
@@ -1347,7 +1344,7 @@ def ensureDeferred(
         Coroutine[Deferred[Any], Any, _T],
         Generator[Deferred[Any], Any, _T],
         Deferred[_T],
-    ]
+    ],
 ) -> Deferred[_T]:
     """
     Schedule the execution of a coroutine that awaits/yields from L{Deferred}s,
@@ -1871,27 +1868,18 @@ def _inlineCallbacks(
             # The traceback starts in this frame (the one for
             # _inlineCallbacks); the next one down should be the application
             # code.
-            excInfo = exc_info()
-            assert excInfo is not None
+            appCodeTrace: TracebackType
 
-            traceback = excInfo[2]
-            assert traceback is not None
-
-            appCodeTrace = traceback.tb_next
-            assert appCodeTrace is not None
-
-            if _oldPypyStack:
-                # PyPy versions through 7.3.13 add an extra frame; 7.3.14 fixed
-                # this discrepancy with CPython.  This code can be removed once
-                # we no longer need to support PyPy 7.3.13 or older.
-                appCodeTrace = appCodeTrace.tb_next
-                assert appCodeTrace is not None
+            # Here and everywhere below, we ignore the theoretical possibility
+            # that this is the end of the traceback (it can effectively never
+            # be).
+            appCodeTrace = exc_info()[2].tb_next  # type:ignore[union-attr,assignment]
 
             if isFailure:
                 # If we invoked this generator frame by throwing an exception
                 # into it, then throwExceptionIntoGenerator will consume an
                 # additional stack frame itself, so we need to skip that too.
-                appCodeTrace = appCodeTrace.tb_next
+                appCodeTrace = appCodeTrace.tb_next  # type:ignore[assignment]
                 assert appCodeTrace is not None
 
             # Now that we've identified the frame being exited by the
@@ -2030,7 +2018,7 @@ def _cancellableInlineCallbacks(
     gen: Union[
         Generator[Deferred[Any], object, _T],
         Coroutine[Deferred[Any], object, _T],
-    ]
+    ],
 ) -> Deferred[_T]:
     """
     Make an C{@}L{inlineCallbacks} cancellable.
@@ -2057,7 +2045,7 @@ class _InternalInlineCallbacksCancelledError(Exception):
 
 
 def inlineCallbacks(
-    f: Callable[_P, Generator[Deferred[Any], Any, _T]]
+    f: Callable[_P, Generator[Deferred[Any], Any, _T]],
 ) -> Callable[_P, Deferred[_T]]:
     """
     L{inlineCallbacks} helps you write L{Deferred}-using code that looks like a
