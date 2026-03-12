@@ -7,6 +7,8 @@ Assorted functionality which is commonly useful when writing unit tests.
 """
 from __future__ import annotations
 
+import typing
+from dataclasses import dataclass
 from io import BytesIO
 from socket import AF_INET, AF_INET6
 from time import time
@@ -33,19 +35,26 @@ from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
 from twisted.internet.defer import Deferred, ensureDeferred, succeed
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.internet.interfaces import (
+    IAddress,
     IConnector,
     IConsumer,
+    IHostnameResolver,
+    IHostResolution,
     IListeningPort,
     IProtocol,
+    IProtocolFactory,
     IPushProducer,
     IReactorCore,
     IReactorFDSet,
+    IReactorPluggableNameResolver,
     IReactorSocket,
     IReactorSSL,
     IReactorTCP,
     IReactorUNIX,
+    IResolutionReceiver,
     ITransport,
 )
+from twisted.internet.protocol import ClientFactory
 from twisted.internet.task import Clock
 from twisted.logger import ILogObserver, LogEvent, LogPublisher
 from twisted.protocols import basic
@@ -72,6 +81,14 @@ __all__ = [
 _P = ParamSpec("_P")
 
 
+class _ProtocolConnectionMadeHaver(typing.Protocol):
+    """
+    Explicit stipulation of the implicit requirement of L{AccumulatingProtocol}'s factory.
+    """
+
+    protocolConnectionMade: Deferred[AccumulatingProtocol] | None
+
+
 class AccumulatingProtocol(protocol.Protocol):
     """
     L{AccumulatingProtocol} is an L{IProtocol} implementation which collects
@@ -87,26 +104,29 @@ class AccumulatingProtocol(protocol.Protocol):
         C{connectionLost} is called.
     """
 
+    made: int
+    closed: int
     made = closed = 0
-    closedReason = None
+    closedReason: failure.Failure | None = None
+    closedDeferred: Deferred[None] | None = None
+    data: bytes = b""
 
-    closedDeferred = None
+    factory: protocol.Factory | None = None
 
-    data = b""
-
-    factory = None
-
-    def connectionMade(self):
+    def connectionMade(self) -> None:
         self.made = 1
-        if self.factory is not None and self.factory.protocolConnectionMade is not None:
-            d = self.factory.protocolConnectionMade
-            self.factory.protocolConnectionMade = None
+        factory: _ProtocolConnectionMadeHaver | None = (
+            self.factory  # type:ignore[assignment]
+        )
+        if factory is not None and factory.protocolConnectionMade is not None:
+            d = factory.protocolConnectionMade
+            factory.protocolConnectionMade = None
             d.callback(self)
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         self.data += data
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: failure.Failure | None = None) -> None:
         self.closed = 1
         self.closedReason = reason
         if self.closedDeferred is not None:
@@ -414,8 +434,54 @@ class _FakeConnector:
         return self._address
 
 
+@implementer(IHostResolution)
+@dataclass
+class _SynchronousResolution:
+    name: str
+
+    def cancel(self) -> None:
+        """
+        Provided just for interface compliance; it should be impossible to
+        reach here, since it's resolved synchronously.
+        """
+        raise Exception("already resolved")  # pragma: no cover
+
+
+@implementer(IHostnameResolver)
+class SynchronousResolver:
+    """
+    A very simple L{IHostnameResolver} that immediately, synchronously resolves
+    all host names to a single static address (TCPv4, 127.0.0.1) while
+    preserving any requested port number.
+    """
+
+    def resolveHostName(
+        self,
+        resolutionReceiver: IResolutionReceiver,
+        hostName: str,
+        portNumber: int = 0,
+        addressTypes: Sequence[type[IAddress]] | None = None,
+        transportSemantics: str = "TCP",
+    ) -> IHostResolution:
+        """
+        Implement L{IHostnameResolver.resolveHostName} to synchronously resolve
+        the name and complete resolution before returning.
+        """
+        resolution = _SynchronousResolution(hostName)
+        resolutionReceiver.resolutionBegan(resolution)
+        resolutionReceiver.addressResolved(IPv4Address("TCP", "127.0.0.1", portNumber))
+        resolutionReceiver.resolutionComplete()
+        return resolution
+
+
 @implementer(
-    IReactorCore, IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket, IReactorFDSet
+    IReactorCore,
+    IReactorTCP,
+    IReactorSSL,
+    IReactorUNIX,
+    IReactorSocket,
+    IReactorFDSet,
+    IReactorPluggableNameResolver,
 )
 class MemoryReactor:
     """
@@ -474,6 +540,10 @@ class MemoryReactor:
         connections added using C{adoptStreamConnection}.
     """
 
+    nameResolver: IHostnameResolver
+    tcpServers: list[tuple[int, IProtocolFactory, int, str]]
+    tcpClients: list[tuple[str, int, ClientFactory, int, str | None]]
+
     def __init__(self):
         """
         Initialize the tracking lists.
@@ -481,9 +551,9 @@ class MemoryReactor:
         self.hasInstalled = False
 
         self.running = False
-        self.hasRun = True
-        self.hasStopped = True
-        self.hasCrashed = True
+        self.hasRun = False
+        self.hasStopped = False
+        self.hasCrashed = False
 
         self.whenRunningHooks = []
         self.triggers = {}
@@ -500,6 +570,15 @@ class MemoryReactor:
 
         self.readers = set()
         self.writers = set()
+        self.nameResolver = SynchronousResolver()
+
+    def installNameResolver(self, resolver: IHostnameResolver) -> IHostnameResolver:
+        """
+        Implement L{IReactorPluggableNameResolver}.
+        """
+        oldResolver = self.nameResolver
+        self.nameResolver = resolver
+        return oldResolver
 
     def install(self):
         """
@@ -590,8 +669,20 @@ class MemoryReactor:
         """
         Fake L{IReactorCore.callWhenRunning}.
         Keeps a list of invocations to make in C{self.whenRunningHooks}.
+
+        If the reactor has not started, the callable will be scheduled
+        to run when it does start. Otherwise, the callable will be invoked
+        immediately.
         """
-        self.whenRunningHooks.append((callable, args, kw))
+        # Normally, we would only key off of `self.running`, but the `MemoryReactor` is
+        # a bit unique in the fact that it stops itself immediately after calling
+        # `MemoryReactor.run()`. We're going to consider it good enough if the reactor
+        # has ever been started (`self.hasRun`).
+        if self.running or self.hasRun:
+            callable(*args, **kw)
+            return None
+        else:
+            self.whenRunningHooks.append((callable, args, kw))
 
     def adoptStreamPort(self, fileno, addressFamily, factory):
         """
@@ -761,7 +852,13 @@ class MemoryReactorClock(MemoryReactor, Clock):
         Clock.__init__(self)
 
 
-@implementer(IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
+@implementer(
+    IReactorTCP,
+    IReactorSSL,
+    IReactorUNIX,
+    IReactorSocket,
+    IReactorPluggableNameResolver,
+)
 class RaisingMemoryReactor:
     """
     A fake reactor to be used in tests.  It accepts TCP connection setup
@@ -771,7 +868,11 @@ class RaisingMemoryReactor:
     @ivar _connectException: An instance of an L{Exception}
     """
 
-    def __init__(self, listenException=None, connectException=None):
+    def __init__(
+        self,
+        listenException: Exception | None = None,
+        connectException: Exception | None = None,
+    ) -> None:
         """
         @param listenException: An instance of an L{Exception} to raise
             when any C{listen} method is called.
@@ -781,6 +882,14 @@ class RaisingMemoryReactor:
         """
         self._listenException = listenException
         self._connectException = connectException
+        self.nameResolver: IHostnameResolver = SynchronousResolver()
+
+    def installNameResolver(self, nameResolver: IHostnameResolver) -> IHostnameResolver:
+        """
+        Implement L{IReactorPluggableNameResolver}.
+        """
+        previous, self.nameResolver = self.nameResolver, nameResolver
+        return previous
 
     def adoptStreamPort(self, fileno, addressFamily, factory):
         """
@@ -991,7 +1100,7 @@ def _benchmarkWithReactor(
             Generator[Deferred[Any], Any, _T],
             Deferred[_T],
         ],
-    ]
+    ],
 ) -> Callable[[Any], None]:  # pragma: no cover
     """
     Decorator for running a benchmark tests that loops the reactor.

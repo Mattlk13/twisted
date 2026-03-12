@@ -114,7 +114,7 @@ class _StartServerAndTearDownMixin:
 
     def writeCGI(self, source):
         cgiFilename = os.path.abspath(self.mktemp())
-        with open(cgiFilename, "wt") as cgiFile:
+        with open(cgiFilename, "w") as cgiFile:
             cgiFile.write(source)
         return cgiFilename
 
@@ -264,7 +264,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
 
     def test_ReadEmptyInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        with open(cgiFilename, "wt") as cgiFile:
+        with open(cgiFilename, "w") as cgiFile:
             cgiFile.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
@@ -285,7 +285,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
 
     def test_ReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        with open(cgiFilename, "wt") as cgiFile:
+        with open(cgiFilename, "w") as cgiFile:
             cgiFile.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
@@ -310,7 +310,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
 
     def test_ReadAllInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        with open(cgiFilename, "wt") as cgiFile:
+        with open(cgiFilename, "w") as cgiFile:
             cgiFile.write(READALLINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
