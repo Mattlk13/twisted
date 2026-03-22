@@ -704,7 +704,7 @@ class TLSTests(TestCase, LoopbackMixin):
 
         def checkVerifyFailedMessage(e: smtp.SMTPConnectError) -> None:
             # check that the SMTPConnectError has a message relating to the TLS error
-            self.assertIn("certificate verify failed", str(e))
+            self.assertIn("VerificationError", str(e))
 
         return self.assertFailure(sentDeferred, smtp.SMTPConnectError).addCallback(
             checkVerifyFailedMessage
