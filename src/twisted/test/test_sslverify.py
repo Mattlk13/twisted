@@ -2612,6 +2612,14 @@ class ALPNTests(TestCase):
     if skipSSL:
         skip = skipSSL
 
+    def negotiateProtocol(
+        self,
+        serverProtocols: list[bytes],
+        clientProtocols: list[bytes],
+        viaFactory: bool = False,
+    ) -> tuple[bytes | None, Failure | None]:
+        return negotiateProtocol(serverProtocols, clientProtocols, viaFactory)
+
     def test_nextProtocolMechanismsALPNIsSupported(self):
         """
         When ALPN is available on a platform, protocolNegotiationMechanisms
@@ -2622,26 +2630,16 @@ class ALPNTests(TestCase):
 
     def test_connectionCreatorNegotiation(self) -> None:
         protocols = [b"a", b"b"]
-        negotiatedProtocol, lostReason = negotiateProtocol(
+        negotiatedProtocol, lostReason = self.negotiateProtocol(
             clientProtocols=protocols,
             serverProtocols=protocols,
-        )
-        self.assertIsNone(lostReason)
-        self.assertEqual(negotiatedProtocol, b"a")
-
-    def test_optionsForClientNegotiation(self) -> None:
-        protocols = [b"a", b"b"]
-        negotiatedProtocol, lostReason = negotiateProtocol(
-            clientProtocols=protocols,
-            serverProtocols=protocols,
-            clientHostname="example.com",
         )
         self.assertIsNone(lostReason)
         self.assertEqual(negotiatedProtocol, b"a")
 
     def test_factoryNegotiation(self) -> None:
         protocols = [b"a", b"b"]
-        negotiatedProtocol, lostReason = negotiateProtocol(
+        negotiatedProtocol, lostReason = self.negotiateProtocol(
             clientProtocols=protocols,
             serverProtocols=protocols,
             viaFactory=True,
@@ -2654,7 +2652,7 @@ class ALPNTests(TestCase):
         When negotiating with an empty acceptable protocols list, no protocol
         is assigned but the connection is not lost.
         """
-        negotiatedProtocol, lostReason = negotiateProtocol(
+        negotiatedProtocol, lostReason = self.negotiateProtocol(
             serverProtocols=[], clientProtocols=[]
         )
         self.assertIs(negotiatedProtocol, None)
@@ -2665,11 +2663,23 @@ class ALPNTests(TestCase):
         When negotiating with an empty acceptable protocols list, no protocol
         is assigned but the connection is not lost.
         """
-        negotiatedProtocol, lostReason = negotiateProtocol(
+        negotiatedProtocol, lostReason = self.negotiateProtocol(
             serverProtocols=[b"server-only"], clientProtocols=[b"client-only"]
         )
         self.assertIs(negotiatedProtocol, None)
         self.assertIsNot(lostReason, None)
+
+
+class ALPNOptionsForClientTLSTests(ALPNTests):
+    def negotiateProtocol(
+        self,
+        serverProtocols: list[bytes],
+        clientProtocols: list[bytes],
+        viaFactory: bool = False,
+    ) -> tuple[bytes | None, Failure | None]:
+        return negotiateProtocol(
+            serverProtocols, clientProtocols, viaFactory, clientHostname="example.com"
+        )
 
 
 class _NotSSLTransport:
