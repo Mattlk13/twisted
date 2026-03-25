@@ -440,6 +440,7 @@ def loopbackTLSConnectionInMemory(
     serverProtocols: list[bytes] | None = None,
     clientProtocols: list[bytes] | None = None,
     viaFactory: bool = False,
+    clientOptionsHost: str | None = None,
 ) -> tuple[
     TLSMemoryBIOProtocol, TLSMemoryBIOProtocol, GreetingServer, ListeningClient, IOPump
 ]:
@@ -471,10 +472,18 @@ def loopbackTLSConnectionInMemory(
     @return: 5-tuple of server-tls-protocol, client-tls-protocol,
         server-app-protocol, client-app-protocol, L{IOPump}
     """
-    clientCertOpts = sslverify.OpenSSLCertificateOptions(
-        trustRoot=trustRoot,
-        acceptableProtocols=clientProtocols if not viaFactory else None,
-    )
+    clientCertOpts: sslverify.ClientTLSOptions | sslverify.OpenSSLCertificateOptions
+    if clientOptionsHost is not None:
+        clientCertOpts = sslverify.optionsForClientTLS(
+            clientOptionsHost,
+            trustRoot=trustRoot,
+            acceptableProtocols=clientProtocols if not viaFactory else None,
+        )
+    else:
+        clientCertOpts = sslverify.OpenSSLCertificateOptions(
+            trustRoot=trustRoot,
+            acceptableProtocols=clientProtocols if not viaFactory else None,
+        )
     serverCertOpts = sslverify.OpenSSLCertificateOptions(
         privateKey=privateKey,
         certificate=serverCertificate,
@@ -2560,6 +2569,7 @@ def negotiateProtocol(
     serverProtocols: list[bytes],
     clientProtocols: list[bytes],
     viaFactory: bool = False,
+    clientHostname: str | None = None,
 ) -> tuple[bytes | None, Failure | None]:
     """
     Create the TLS connection and negotiate a next protocol.
@@ -2584,6 +2594,7 @@ def negotiateProtocol(
         clientProtocols=clientProtocols,
         serverProtocols=serverProtocols,
         viaFactory=viaFactory,
+        clientOptionsHost=clientHostname,
     )
     pump.flush()
 
@@ -2614,6 +2625,16 @@ class ALPNTests(TestCase):
         negotiatedProtocol, lostReason = negotiateProtocol(
             clientProtocols=protocols,
             serverProtocols=protocols,
+        )
+        self.assertIsNone(lostReason)
+        self.assertEqual(negotiatedProtocol, b"a")
+
+    def test_optionsForClientNegotiation(self) -> None:
+        protocols = [b"a", b"b"]
+        negotiatedProtocol, lostReason = negotiateProtocol(
+            clientProtocols=protocols,
+            serverProtocols=protocols,
+            clientHostname="example.com",
         )
         self.assertIsNone(lostReason)
         self.assertEqual(negotiatedProtocol, b"a")
