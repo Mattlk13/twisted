@@ -18,7 +18,7 @@ from zope.interface import directlyProvides, providedBy
 from typing_extensions import Self, TypeVar
 
 from twisted.internet import error, interfaces
-from twisted.internet.interfaces import ILoggingContext
+from twisted.internet.interfaces import IAddress, ILoggingContext
 from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 from twisted.python import log
 
@@ -154,7 +154,7 @@ class WrappingFactory(ClientFactory[WP]):
     def clientConnectionLost(self, connector, reason):
         self.wrappedFactory.clientConnectionLost(connector, reason)
 
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr: IAddress | None) -> WP:
         return self.protocol(self, self.wrappedFactory.buildProtocol(addr))
 
     def registerProtocol(self, p):

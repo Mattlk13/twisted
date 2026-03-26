@@ -1393,6 +1393,15 @@ class AgentURIInjectionTests(
         agent.request(method, uri, Headers(), None)
 
 
+def dummyTLSProtocol() -> TLSMemoryBIOProtocol:
+    factory = TLSMemoryBIOFactory(
+        optionsForClientTLS("example.com"), True, Factory.forProtocol(Protocol)
+    )
+    result = factory.buildProtocol(None)
+    assert result is not None
+    return result
+
+
 @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
 class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMixin):
     """
@@ -1577,7 +1586,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
         trustRoot = CustomOpenSSLTrustRoot()
         policy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         creator = policy.creatorForNetloc(b"thingy", 4321)
-        connection = creator.clientConnectionForTLS(None)
+        connection = creator.clientConnectionForTLS(dummyTLSProtocol())
         self.assertTrue(trustRoot.called)
         self.assertIs(trustRoot.context, connection.get_context())
 
@@ -3308,12 +3317,12 @@ class HostnameCachingHTTPSPolicyTests(TestCase):
         wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         policy = HostnameCachingHTTPSPolicy(wrappedPolicy)
         creator = policy.creatorForNetloc(b"foo", 1589)
-        firstConnection = creator.clientConnectionForTLS(None)
+        firstConnection = creator.clientConnectionForTLS(dummyTLSProtocol())
         self.assertIs(trustRoot.context, firstConnection.get_context())
         self.assertTrue(trustRoot.called)
         trustRoot.called = False
         self.assertEqual(1, len(policy._cache))
-        connection = creator.clientConnectionForTLS(None)
+        connection = creator.clientConnectionForTLS(dummyTLSProtocol())
         self.assertIs(trustRoot.context, connection.get_context())
 
         policy.creatorForNetloc(b"foo", 1589)
