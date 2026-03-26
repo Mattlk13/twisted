@@ -1568,7 +1568,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
             "Since Twisted 14.0, you must pass a provider of IPolicyForHTTPS.",
         )
 
-    def test_alternateTrustRoot(self):
+    def test_alternateTrustRoot(self) -> None:
         """
         L{BrowserLikePolicyForHTTPS.creatorForNetloc} returns an
         L{IOpenSSLClientConnectionCreator} provider which will add certificates
@@ -3297,7 +3297,7 @@ class ReadBodyTests(TestCase):
 
 @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
 class HostnameCachingHTTPSPolicyTests(TestCase):
-    def test_cacheIsUsed(self):
+    def test_cacheIsUsed(self) -> None:
         """
         Verify that the connection creator is added to the
         policy's cache, and that it is reused on subsequent calls
