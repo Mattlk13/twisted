@@ -16,12 +16,13 @@ from collections.abc import Hashable, Iterable
 from dataclasses import dataclass
 from functools import wraps
 from http.cookiejar import CookieJar
-from typing import TYPE_CHECKING, Callable, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Callable, TypeVar
 from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
 
 from zope.interface import implementer
 
 from incremental import Version
+from typing_extensions import ParamSpec
 
 from twisted.internet import defer, protocol, task
 from twisted.internet.abstract import isIPv6Address
