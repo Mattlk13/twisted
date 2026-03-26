@@ -25,6 +25,7 @@ from twisted.internet._idna import _idnaText
 from twisted.internet.address import IPv4Address
 from twisted.internet.error import CertificateError, ConnectionClosed, ConnectionLost
 from twisted.internet.interfaces import (
+    IOpenSSLClientConnectionCreator,
     IOpenSSLContextFactory,
     IProtocol,
     IProtocolNegotiationFactory,
@@ -472,7 +473,7 @@ def loopbackTLSConnectionInMemory(
     @return: 5-tuple of server-tls-protocol, client-tls-protocol,
         server-app-protocol, client-app-protocol, L{IOPump}
     """
-    clientCertOpts: sslverify.ClientTLSOptions | sslverify.OpenSSLCertificateOptions
+    clientCertOpts: IOpenSSLClientConnectionCreator
     if clientOptionsHost is not None:
         clientCertOpts = sslverify.optionsForClientTLS(
             clientOptionsHost,
@@ -2620,7 +2621,7 @@ class ALPNTests(TestCase):
     ) -> tuple[bytes | None, Failure | None]:
         return negotiateProtocol(serverProtocols, clientProtocols, viaFactory)
 
-    def test_nextProtocolMechanismsALPNIsSupported(self):
+    def test_nextProtocolMechanismsALPNIsSupported(self) -> None:
         """
         When ALPN is available on a platform, protocolNegotiationMechanisms
         includes ALPN in the suported protocols.
