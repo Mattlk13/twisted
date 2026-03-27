@@ -429,6 +429,12 @@ class _Assertions(pyunit.TestCase):
 
         return context._handle(lambda: f(*args, **kwargs))
 
+    # The type-ignore below is present to address the evolving incompatible
+    # signature between assertRaises and failUnlessRaises in the stdlib.
+    # Depending on which version of Python you are developing with you might
+    # get a spurious error here *or not* which is why there's also the
+    # unused-ignore ignore here; in upstream unittest this method is now
+    # entirely removed, since Python 3.12, so there's nothing to conflict with.
     failUnlessRaises = assertRaises  # type:ignore[assignment,unused-ignore]
 
     def assertEqual(self, first, second, msg=None):
