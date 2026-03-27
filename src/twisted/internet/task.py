@@ -5,7 +5,7 @@
 """
 Scheduling utility methods and classes.
 """
-
+from __future__ import annotations
 
 import sys
 import time
@@ -381,14 +381,17 @@ def _defaultScheduler(callable: Callable[[], None]) -> IDelayedCall:
     return cast(IReactorTime, reactor).callLater(_EPSILON, callable)
 
 
-_TaskResultT = TypeVar("_TaskResultT")
+_TaskIteratorT = TypeVar("_TaskIteratorT", bound=Iterator[object])
 
 
-class CooperativeTask(Generic[_TaskResultT]):
+class CooperativeTask(Generic[_TaskIteratorT]):
     """
     A L{CooperativeTask} is a task object inside a L{Cooperator}, which can be
     paused, resumed, and stopped.  It can also have its completion (or
     termination) monitored.
+
+    It is generic over a task iterator type, L{_TaskIteratorT}, which is the
+    type of the iterator passed to it and also the type of its result.
 
     @see: L{Cooperator.cooperate}
 
@@ -414,7 +417,7 @@ class CooperativeTask(Generic[_TaskResultT]):
 
     def __init__(
         self,
-        iterator: Iterator[_TaskResultT],
+        iterator: _TaskIteratorT,
         cooperator: "Cooperator",
     ) -> None:
         """
@@ -423,13 +426,13 @@ class CooperativeTask(Generic[_TaskResultT]):
         """
         self._iterator = iterator
         self._cooperator = cooperator
-        self._deferreds: List[Deferred[Iterator[_TaskResultT]]] = []
+        self._deferreds: List[Deferred[_TaskIteratorT]] = []
         self._pauseCount = 0
         self._completionState: Optional[SchedulerError] = None
-        self._completionResult: Optional[Union[Iterator[_TaskResultT], Failure]] = None
+        self._completionResult: Optional[Union[_TaskIteratorT, Failure]] = None
         cooperator._addTask(self)
 
-    def whenDone(self) -> Deferred[Iterator[_TaskResultT]]:
+    def whenDone(self) -> Deferred[_TaskIteratorT]:
         """
         Get a L{Deferred} notification of when this task is complete.
 
@@ -441,7 +444,7 @@ class CooperativeTask(Generic[_TaskResultT]):
 
         @rtype: L{Deferred}
         """
-        d: Deferred[Iterator[_TaskResultT]] = Deferred()
+        d: Deferred[_TaskIteratorT] = Deferred()
         if self._completionState is None:
             self._deferreds.append(d)
         else:
@@ -478,7 +481,7 @@ class CooperativeTask(Generic[_TaskResultT]):
     def _completeWith(
         self,
         completionState: SchedulerError,
-        deferredResult: Union[Iterator[_TaskResultT], Failure],
+        deferredResult: Union[_TaskIteratorT, Failure],
     ) -> None:
         """
         @param completionState: a L{SchedulerError} exception or a subclass
@@ -598,8 +601,8 @@ class Cooperator:
         stepped as soon as they are added, or if they will be queued up until
         L{Cooperator.start} is called.
         """
-        self._tasks: List[CooperativeTask[object]] = []
-        self._metarator: Iterator[CooperativeTask[object]] = iter(())
+        self._tasks: List[CooperativeTask[Iterator[object]]] = []
+        self._metarator: Iterator[CooperativeTask[Iterator[object]]] = iter(())
         self._terminationPredicateFactory = terminationPredicateFactory
         self._scheduler = scheduler
         self._delayedCall: Optional[IDelayedCall] = None
@@ -608,15 +611,18 @@ class Cooperator:
 
     def coiterate(
         self,
-        iterator: Iterator[_TaskResultT],
-        doneDeferred: Optional[Deferred[Iterator[_TaskResultT]]] = None,
-    ) -> Deferred[Iterator[_TaskResultT]]:
+        iterator: _TaskIteratorT,
+        doneDeferred: Optional[Deferred[_TaskIteratorT]] = None,
+    ) -> Deferred[_TaskIteratorT]:
         """
         Add an iterator to the list of iterators this L{Cooperator} is
         currently running.
 
-        Equivalent to L{cooperate}, but returns a L{Deferred} that will
-        be fired when the task is done.
+        Equivalent to L{cooperate}, but returns a L{Deferred} that will be
+        fired when the task is done.
+
+        @note: The type of value yielded by the given iterator must match that
+            of the other iterators added to this cooperator.
 
         @param doneDeferred: If specified, this will be the Deferred used as
             the completion deferred.  It is suggested that you use the default,
@@ -626,15 +632,11 @@ class Cooperator:
         """
         if doneDeferred is None:
             doneDeferred = Deferred()
-        whenDone: Deferred[Iterator[_TaskResultT]] = CooperativeTask(
-            iterator, self
-        ).whenDone()
+        whenDone: Deferred[_TaskIteratorT] = CooperativeTask(iterator, self).whenDone()
         whenDone.chainDeferred(doneDeferred)
         return doneDeferred
 
-    def cooperate(
-        self, iterator: Iterator[_TaskResultT]
-    ) -> CooperativeTask[_TaskResultT]:
+    def cooperate(self, iterator: _TaskIteratorT) -> CooperativeTask[_TaskIteratorT]:
         """
         Start running the given iterator as a long-running cooperative task, by
         calling next() on it as a periodic timed event.
@@ -667,7 +669,7 @@ class Cooperator:
             self._delayedCall.cancel()
             self._delayedCall = None
 
-    def _tasksWhileNotStopped(self) -> Iterable[CooperativeTask[object]]:
+    def _tasksWhileNotStopped(self) -> Iterable[CooperativeTask[Iterator[object]]]:
         """
         Yield all L{CooperativeTask} objects in a loop as long as this
         L{Cooperator}'s termination condition has not been met.
@@ -735,7 +737,7 @@ class Cooperator:
 _theCooperator = Cooperator()
 
 
-def coiterate(iterator: Iterator[_T]) -> Deferred[Iterator[_T]]:
+def coiterate(iterator: _TaskIteratorT) -> Deferred[_TaskIteratorT]:
     """
     Cooperatively iterate over the given iterator, dividing runtime between it
     and all other iterators which have been passed to this function and not yet
@@ -748,7 +750,7 @@ def coiterate(iterator: Iterator[_T]) -> Deferred[Iterator[_T]]:
     return _theCooperator.coiterate(iterator)
 
 
-def cooperate(iterator: Iterator[_T]) -> CooperativeTask[_T]:
+def cooperate(iterator: _TaskIteratorT) -> CooperativeTask[_TaskIteratorT]:
     """
     Start running the given iterator as a long-running cooperative task, by
     calling next() on it as a periodic timed event.
