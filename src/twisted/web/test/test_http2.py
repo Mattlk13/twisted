@@ -665,7 +665,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         b = StringTransport()
         a = H2Connection()
         a.requestFactory = ChunkedHTTPHandlerProxy
-        getRequestHeaders = self.getRequestHeaders
+        getRequestHeaders = list(self.getRequestHeaders)
         getRequestHeaders[2] = (":path", "/chunked/4")
 
         frames = [
