@@ -951,8 +951,9 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self.code = -1
         self.log = util.LineLog(logsize)
 
-        # the reason we were unable to successfully send the message, if any.
-        self._failureReason: Optional[Failure] = None
+        # A `Failure` giving the reason we were unable to successfully send the message,
+        # if any. Otherwise, `None`.
+        self._failureReason = None
 
     def sendLine(self, line):
         # Log sendLine only if you are in debug mode for performance

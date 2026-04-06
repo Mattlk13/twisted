@@ -10,7 +10,7 @@ import base64
 import inspect
 import re
 from io import BytesIO
-from typing import Any, List, Optional, Tuple, Type
+from typing import Any, List, Optional, Tuple, Type, cast
 
 from zope.interface import directlyProvides, implementer
 
@@ -24,7 +24,8 @@ from twisted.cred.credentials import IAnonymous
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm, Portal
 from twisted.internet import address, defer, error, interfaces, protocol, reactor, task
-from twisted.internet.protocol import Factory
+from twisted.internet.address import IPv4Address
+from twisted.internet.protocol import Factory, ServerFactory
 from twisted.internet.testing import MemoryReactor, StringTransport
 from twisted.mail import smtp
 from twisted.mail._cred import LOGINCredentials
@@ -670,7 +671,7 @@ class TLSTests(TestCase, LoopbackMixin):
 
         return self.loopback(server, client).addCallback(check)
 
-    def test_ESMTPSenderFactory_TLSError(self) -> None:
+    def test_ESMTPSenderFactory_TLSError(self) -> defer.Deferred[Any]:
         """
         Attempting to connect to an ESMTP server which presents an invalid certificate
         will trigger a failure that contains information that the failure was caused by
@@ -680,12 +681,12 @@ class TLSTests(TestCase, LoopbackMixin):
         # STARTTLS
         buildServerProtocol = lambda: DummyESMTP(contextFactory=ServerTLSContext())
         serverFactory = Factory.forProtocol(buildServerProtocol)
-        serverPort = reactor.listenTCP(0, serverFactory, interface="127.0.0.1")
+        serverPort = reactor.listenTCP(0, cast(ServerFactory, serverFactory), interface="127.0.0.1")
         self.addCleanup(serverPort.stopListening)
 
         # build a client, which won't accept the certificate presented by the dummy
         # server.
-        sentDeferred = defer.Deferred()
+        sentDeferred: defer.Deferred[Any] = defer.Deferred()
         clientFactory = smtp.ESMTPSenderFactory(
             "username",
             "password",
@@ -699,8 +700,10 @@ class TLSTests(TestCase, LoopbackMixin):
         )
 
         # connect the two together
+        serverPortAddress = serverPort.getHost()
+        assert isinstance(serverPortAddress, IPv4Address)
         connector = reactor.connectTCP(
-            serverPort.getHost().host, serverPort.getHost().port, clientFactory
+            serverPortAddress.host, serverPortAddress.port, clientFactory
         )
         self.addCleanup(connector.disconnect)
 
