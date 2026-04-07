@@ -681,7 +681,9 @@ class TLSTests(TestCase, LoopbackMixin):
         # STARTTLS
         buildServerProtocol = lambda: DummyESMTP(contextFactory=ServerTLSContext())
         serverFactory = Factory.forProtocol(buildServerProtocol)
-        serverPort = reactor.listenTCP(0, cast(ServerFactory, serverFactory), interface="127.0.0.1")
+        serverPort = reactor.listenTCP(
+            0, cast(ServerFactory, serverFactory), interface="127.0.0.1"
+        )
         self.addCleanup(serverPort.stopListening)
 
         # build a client, which won't accept the certificate presented by the dummy

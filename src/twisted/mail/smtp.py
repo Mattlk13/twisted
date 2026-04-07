@@ -19,7 +19,7 @@ import time
 import warnings
 from email.utils import parseaddr
 from io import BytesIO
-from typing import Optional, Type
+from typing import Type
 
 from zope.interface import implementer
 
@@ -62,7 +62,6 @@ from twisted.mail.interfaces import (
 from twisted.protocols import basic, policies
 from twisted.python import log, util
 from twisted.python.compat import iterbytes, nativeString, networkString
-from twisted.python.failure import Failure
 from twisted.python.runtime import platform
 
 __all__ = [
