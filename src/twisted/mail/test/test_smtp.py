@@ -4,13 +4,13 @@
 """
 Test cases for twisted.mail.smtp module.
 """
-
+from __future__ import annotations
 
 import base64
 import inspect
 import re
 from io import BytesIO
-from typing import Any, List, Optional, Tuple, Type
+from typing import Any
 
 from zope.interface import directlyProvides, implementer
 
@@ -31,7 +31,7 @@ from twisted.protocols import basic, loopback
 from twisted.python.util import LineLog
 from twisted.trial.unittest import TestCase
 
-sslSkip: Optional[str]
+sslSkip: str | None
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
@@ -354,8 +354,8 @@ class DummyESMTP(DummyProto, smtp.ESMTP):
 
 
 class AnotherTestCase:
-    serverClass: Optional[Type[protocol.Protocol]] = None
-    clientClass: Optional[Type[smtp.SMTPClient]] = None
+    serverClass: type[protocol.Protocol] | None = None
+    clientClass: type[smtp.SMTPClient] | None = None
 
     messages = [
         (
@@ -401,7 +401,7 @@ To: foo
         ),
     ]
 
-    data: List[Tuple[bytes, bytes, Any, Any]] = [
+    data: list[tuple[bytes, bytes, Any, Any]] = [
         (b"", b"220.*\r\n$", None, None),
         (b"HELO foo.com\r\n", b"250.*\r\n$", None, None),
         (b"RSET\r\n", b"250.*\r\n$", None, None),
