@@ -19,7 +19,6 @@ import time
 import warnings
 from email.utils import parseaddr
 from io import BytesIO
-from typing import Type
 
 from zope.interface import implementer
 
@@ -1867,7 +1866,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
     """
 
     domain = DNSNAME
-    protocol: Type[SMTPClient] = SMTPSender
+    protocol: type[SMTPClient] = SMTPSender
 
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5, timeout=None):
         """
