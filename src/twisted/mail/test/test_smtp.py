@@ -10,7 +10,7 @@ import base64
 import inspect
 import re
 from io import BytesIO
-from typing import Any, List, Optional, Tuple, Type, cast
+from typing import Any, cast
 
 from zope.interface import directlyProvides, implementer
 
