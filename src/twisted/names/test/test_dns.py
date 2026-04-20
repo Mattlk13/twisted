@@ -356,48 +356,51 @@ class NameTests(unittest.TestCase):
         """
         L{Name.decode} raises L{dns.DNSDecodeError} when the number of
         compression-pointer dereferences taken for a single message exceeds
-        the limit carried by the shared L{dns._DecodeContext}.
+        the limit carried by the shared L{dns._DecodeContext} installed
+        through the private L{dns._decodeContextVar}.
         """
         # Five distinct pointers chained end-to-end, terminated by a zero
         # label byte.  With a maxJumps of three the fourth dereference must
         # trip the safety limit.
         payload = b"\xc0\x02\xc0\x04\xc0\x06\xc0\x08\x00"
         context = dns._DecodeContext(maxJumps=3)
-        self.assertRaises(
-            dns.DNSDecodeError,
-            dns.Name().decode,
-            BytesIO(payload),
-            None,
-            context,
-        )
+        with dns._installDecodeContext(context):
+            self.assertRaises(
+                dns.DNSDecodeError,
+                dns.Name().decode,
+                BytesIO(payload),
+            )
 
     def test_compressionPointerCounterIsShared(self):
         """
         The L{dns._DecodeContext} counter accumulates across successive
         L{Name.decode} calls, so that a message whose individual names are
         each within bounds is still rejected when their aggregate exceeds
-        the configured limit.
+        the configured limit.  This mirrors production: L{Message.decode}
+        invokes L{Name.decode} many times against the same stream under one
+        shared context.
         """
         payload = b"\xc0\x02\xc0\x04\x00"
         context = dns._DecodeContext(maxJumps=3)
 
-        stream = BytesIO(payload)
-        dns.Name().decode(stream, context=context)
-        self.assertEqual(context.jumps, 2)
+        with dns._installDecodeContext(context):
+            stream = BytesIO(payload)
+            dns.Name().decode(stream)
+            self.assertEqual(context.jumps, 2)
 
-        stream.seek(0)
-        self.assertRaises(
-            dns.DNSDecodeError,
-            dns.Name().decode,
-            strio=stream,
-            length=None,
-            context=context,
-        )
+            stream.seek(0)
+            self.assertRaises(
+                dns.DNSDecodeError,
+                dns.Name().decode,
+                stream,
+            )
 
     def test_decodeWithoutContextIsBackwardsCompatible(self):
         """
-        L{Name.decode} continues to work when called without a context,
-        using a fresh per-call counter so existing callers are unaffected.
+        L{Name.decode} continues to work when called with no active
+        L{dns._decodeContextVar}, using a fresh per-call counter seeded
+        from L{dns.Name.maxCompressionPointers} so existing callers are
+        unaffected.
         """
         name = dns.Name()
         stream = BytesIO()

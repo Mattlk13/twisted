@@ -17,9 +17,10 @@ import random
 import socket
 import struct
 from collections.abc import Sequence
+from contextlib import contextmanager
 from io import BytesIO
 from itertools import chain
-from typing import SupportsInt, overload
+from typing import Final, SupportsInt, overload
 
 from zope.interface import Attribute, Interface, implementer
 
@@ -447,17 +448,19 @@ def readPrecisely(file, l):
     return buff
 
 
-# Cap the total number of compression-pointer dereferences performed while
-# decoding a single DNS message.  A hostile peer can otherwise craft a packet
-# in which every record name chases a long compression chain, forcing O(N*M)
-# work and stalling the reactor.
-MAX_COMPRESSION_POINTERS_PER_MESSAGE = 1000
+MAX_COMPRESSION_POINTERS_PER_MESSAGE: Final = 1000
+"""
+Cap the total number of compression-pointer dereferences performed while
+decoding a single DNS message.  A hostile peer can otherwise craft a packet
+in which every record name chases a long compression chain, forcing
+C{O(N*M)} work and stalling the reactor.
+"""
 
 
 class DNSDecodeError(ValueError):
     """
     Raised when a DNS message cannot be decoded because it violates a
-    protocol-level safety limit
+    protocol-level safety limit.
     """
 
 
@@ -470,8 +473,12 @@ class _DecodeContext:
     jumps taken across every name in the message, defending against packets
     that fan out thousands of records pointing to deeply chained pointers.
 
+    This class is private.  External callers must not rely on it; the
+    per-message scope is installed and torn down by L{Message.decode}
+    through L{_decodeContextVar}.
+
     @ivar jumps: The number of compression pointers followed so far.
-    @ivar maxJumps: The inclusive upper bound on C{jumps}.  Exceeding it
+    @ivar maxJumps: The inclusive upper bound on L{jumps}.  Exceeding it
         causes L{registerJump} to raise L{DNSDecodeError}.
     """
 
@@ -483,10 +490,14 @@ class _DecodeContext:
 
     def registerJump(self) -> None:
         """
-        Record that a compression pointer has been followed
+        Record that a compression pointer has been followed.
+
+        The check is performed before any further bytes are read so the
+        caller fails fast as soon as the aggregate limit is breached, even
+        if additional records remain in the buffer.
 
         @raise DNSDecodeError: if the cumulative number of jumps exceeds
-            L{maxJumps}
+            L{maxJumps}.
         """
         self.jumps += 1
         if self.jumps > self.maxJumps:
@@ -496,13 +507,35 @@ class _DecodeContext:
             )
 
 
-# Tracks state across nested calls without altering every record's signature.
-# L{Message.decode} manages the lifecycle per-message, while standalone decoders
-# default to a local context when C{_decodeContextVar} is C{None}
-
+# Private module-level L{contextvars.ContextVar} used to share a single
+# L{_DecodeContext} across the re-entrant calls performed while decoding one
+# DNS message.  L{contextvars} (rather than a plain module attribute) is used
+# on purpose: although Twisted's reactor is single-threaded, message decoding
+# is re-entrant across many records in a single pass and L{ContextVar}
+# guarantees the scope is restored correctly on exit -- and remains isolated
+# per-task should a future caller decode messages from multiple
+# L{asyncio}-style contexts concurrently.
 _decodeContextVar: contextvars.ContextVar[_DecodeContext | None] = (
     contextvars.ContextVar("_dnsDecodeContext", default=None)
 )
+
+
+@contextmanager
+def _installDecodeContext(context: _DecodeContext):
+    """
+    Install C{context} on L{_decodeContextVar} for the duration of the
+    C{with} block and restore the previous value on exit.
+
+    This wraps the L{contextvars.ContextVar.set} / L{contextvars.ContextVar.reset}
+    token dance so call sites can use a plain C{with} statement.
+
+    @param context: The L{_DecodeContext} to install as the active context.
+    """
+    token = _decodeContextVar.set(context)
+    try:
+        yield context
+    finally:
+        _decodeContextVar.reset(token)
 
 
 class IEncodable(Interface):
@@ -610,7 +643,17 @@ class Name:
 
     @ivar name: A byte string giving the name.
     @type name: L{bytes}
+
+    @cvar maxCompressionPointers: Per-message cap on the total number of
+        compression-pointer dereferences L{decode} will follow before
+        raising L{DNSDecodeError}.  Defined as a class attribute so
+        subclasses (and, in the future, individual instances) may override
+        it to tune the trade-off between tolerance for legitimately
+        verbose messages and resistance to denial-of-service attacks.
+    @type maxCompressionPointers: L{int}
     """
+
+    maxCompressionPointers: int = MAX_COMPRESSION_POINTERS_PER_MESSAGE
 
     def __init__(self, name: bytes | str = b""):
         """
@@ -652,35 +695,37 @@ class Name:
             strio.write(label)
         strio.write(b"\x00")
 
-    def decode(self, strio, length=None, context=None):
+    def decode(self, strio, length=None):
         """
         Decode a byte string into this Name.
 
+        When invoked from L{Message.decode}, a shared compression-pointer
+        counter is picked up transparently from the private
+        L{_decodeContextVar}.  Standalone callers get a fresh per-call
+        counter seeded from L{maxCompressionPointers}, so existing code
+        keeps working unchanged while still being protected against
+        pathological inputs.
+
         @type strio: file
         @param strio: Bytes will be read from this file until the full Name
-        is decoded.
+            is decoded.
 
-        @type context: L{_DecodeContext} or L{None}
-        @param context: Shared decoding state used to cap the total number
-            of compression-pointer jumps taken while decoding the enclosing
-            DNS message.  When L{None}, the context installed by
-            L{Message.decode} is used if one is active; otherwise a fresh,
-            call-local context is created so that direct callers remain
-            protected and backwards compatible.
+        @type length: L{int} or L{None}
+        @param length: Present for compatibility with the L{IEncodable}
+            interface; ignored by this decoder.
 
         @raise EOFError: Raised when there are not enough bytes available
-        from C{strio}.
+            from C{strio}.
 
-        @raise ValueError: Raised when the name cannot be decoded because it
-            contains a compression loop.
+        @raise ValueError: Raised when the name cannot be decoded because
+            it contains a compression loop.
 
         @raise DNSDecodeError: Raised when the cumulative number of
             compression-pointer jumps exceeds the configured limit.
         """
+        context = _decodeContextVar.get()
         if context is None:
-            context = _decodeContextVar.get()
-            if context is None:
-                context = _DecodeContext()
+            context = _DecodeContext(maxJumps=self.maxCompressionPointers)
         visited = set()
         self.name = b""
         off = 0
@@ -2783,9 +2828,10 @@ class Message(tputil.FancyEqMixin):
 
         # A single shared counter bounds the total compression-pointer work
         # performed across every name in this message.  It is installed on
-        # the context variable so nested record decoders pick it up without
-        # needing to thread it through each signature.
-        with _decodeContextVar.set(_DecodeContext()):
+        # the private context variable so nested record decoders pick it up
+        # without needing to thread it through each signature.
+        decodeContext = _DecodeContext(maxJumps=Name.maxCompressionPointers)
+        with _installDecodeContext(decodeContext):
             self.queries = []
             for i in range(nqueries):
                 q = Query()
@@ -2803,8 +2849,6 @@ class Message(tputil.FancyEqMixin):
 
             for l, n in items:
                 self.parseRecords(l, n, strio)
-        finally:
-            _decodeContextVar.reset(token)
 
     def parseRecords(self, list, num, strio):
         for i in range(num):
