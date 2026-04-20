@@ -1,1 +1,1 @@
-Twisted's type annotations now use modern PEP 585 built-in generics and PEP 604 union syntax throughout the project, while preserving Python 3.9 compatibility with ``from __future__ import annotations``.
+Type annotations now use modern PEP 585 built-in generics and PEP 604 union syntax throughout the project.
