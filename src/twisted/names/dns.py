@@ -2785,8 +2785,7 @@ class Message(tputil.FancyEqMixin):
         # performed across every name in this message.  It is installed on
         # the context variable so nested record decoders pick it up without
         # needing to thread it through each signature.
-        token = _decodeContextVar.set(_DecodeContext())
-        try:
+        with _decodeContextVar.set(_DecodeContext()):
             self.queries = []
             for i in range(nqueries):
                 q = Query()
