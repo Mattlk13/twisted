@@ -389,9 +389,9 @@ class NameTests(unittest.TestCase):
         self.assertRaises(
             dns.DNSDecodeError,
             dns.Name().decode,
-            stream,
-            None,
-            context,
+            strio=stream,
+            length=None,
+            context=context,
         )
 
     def test_decodeWithoutContextIsBackwardsCompatible(self):
