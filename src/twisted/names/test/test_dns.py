@@ -354,60 +354,51 @@ class NameTests(unittest.TestCase):
 
     def test_rejectTooManyCompressionPointers(self):
         """
-        L{Name.decode} raises L{dns.DNSDecodeError} when the number of
-        compression-pointer dereferences taken for a single message exceeds
-        the limit carried by the shared L{dns._DecodeContext} installed
-        through the private L{dns._decodeContextVar}.
+        L{Name.decode} raises L{dns.DNSDecodeError} when it would have to
+        follow more than L{Name.maxCompressionPointers} compression
+        pointers to finish decoding a name.
         """
-        # Five distinct pointers chained end-to-end, terminated by a zero
-        # label byte.  With a maxJumps of three the fourth dereference must
-        # trip the safety limit.
+        # Four distinct pointers chained end-to-end, terminated by a zero
+        # label byte.  With maxCompressionPointers of three the fourth
+        # dereference must trip the safety limit.
         payload = b"\xc0\x02\xc0\x04\xc0\x06\xc0\x08\x00"
-        context = dns._DecodeContext(maxJumps=3)
-        with dns._installDecodeContext(context):
-            self.assertRaises(
-                dns.DNSDecodeError,
-                dns.Name().decode,
-                BytesIO(payload),
-            )
-
-    def test_compressionPointerCounterIsShared(self):
-        """
-        The L{dns._DecodeContext} counter accumulates across successive
-        L{Name.decode} calls, so that a message whose individual names are
-        each within bounds is still rejected when their aggregate exceeds
-        the configured limit.  This mirrors production: L{Message.decode}
-        invokes L{Name.decode} many times against the same stream under one
-        shared context.
-        """
-        payload = b"\xc0\x02\xc0\x04\x00"
-        context = dns._DecodeContext(maxJumps=3)
-
-        with dns._installDecodeContext(context):
-            stream = BytesIO(payload)
-            dns.Name().decode(stream)
-            self.assertEqual(context.jumps, 2)
-
-            stream.seek(0)
-            self.assertRaises(
-                dns.DNSDecodeError,
-                dns.Name().decode,
-                stream,
-            )
-
-    def test_decodeWithoutContextIsBackwardsCompatible(self):
-        """
-        L{Name.decode} continues to work when called with no active
-        L{dns._decodeContextVar}, using a fresh per-call counter seeded
-        from L{dns.Name.maxCompressionPointers} so existing callers are
-        unaffected.
-        """
         name = dns.Name()
+        name.maxCompressionPointers = 3
+        self.assertRaises(
+            dns.DNSDecodeError, name.decode, BytesIO(payload)
+        )
+
+    def test_decodeRecoversAfterDNSDecodeError(self):
+        """
+        After L{Name.decode} raises L{dns.DNSDecodeError}, subsequent
+        L{Name.decode} calls continue to work.  No residual
+        compression-pointer counter leaks across calls, so a legitimate
+        name decoded right after a hostile one still succeeds.
+        """
+        # First, force a DNSDecodeError by decoding a payload that
+        # exceeds the configured limit.
+        hostile = dns.Name()
+        hostile.maxCompressionPointers = 3
+        self.assertRaises(
+            dns.DNSDecodeError,
+            hostile.decode,
+            BytesIO(b"\xc0\x02\xc0\x04\xc0\x06\xc0\x08\x00"),
+        )
+
+        # Then prove the process has not been poisoned: a legitimate
+        # name still decodes normally, both with a fresh instance and
+        # with the instance that just errored.
         stream = BytesIO()
         dns.Name(b"example.org").encode(stream)
+
+        fresh = dns.Name()
         stream.seek(0)
-        name.decode(stream)
-        self.assertEqual(name.name, b"example.org")
+        fresh.decode(stream)
+        self.assertEqual(fresh.name, b"example.org")
+
+        stream.seek(0)
+        hostile.decode(stream)
+        self.assertEqual(hostile.name, b"example.org")
 
     def test_equality(self):
         """
@@ -823,7 +814,7 @@ class MessageTests(unittest.SynchronousTestCase):
         L{Message.decode} installs a shared compression-pointer counter and
         raises L{dns.DNSDecodeError} when the aggregate number of pointer
         dereferences across every record in the message exceeds
-        L{dns.MAX_COMPRESSION_POINTERS_PER_MESSAGE}.
+        L{dns.Message.maxCompressionPointers}.
         """
         chainLength = 100
         numRecords = 8000

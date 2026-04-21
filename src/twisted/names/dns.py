@@ -20,7 +20,7 @@ from collections.abc import Sequence
 from contextlib import contextmanager
 from io import BytesIO
 from itertools import chain
-from typing import Final, SupportsInt, overload
+from typing import SupportsInt, overload
 
 from zope.interface import Attribute, Interface, implementer
 
@@ -448,15 +448,6 @@ def readPrecisely(file, l):
     return buff
 
 
-MAX_COMPRESSION_POINTERS_PER_MESSAGE: Final = 1000
-"""
-Cap the total number of compression-pointer dereferences performed while
-decoding a single DNS message.  A hostile peer can otherwise craft a packet
-in which every record name chases a long compression chain, forcing
-C{O(N*M)} work and stalling the reactor.
-"""
-
-
 class DNSDecodeError(ValueError):
     """
     Raised when a DNS message cannot be decoded because it violates a
@@ -484,7 +475,7 @@ class _DecodeContext:
 
     __slots__ = ("jumps", "maxJumps")
 
-    def __init__(self, maxJumps: int = MAX_COMPRESSION_POINTERS_PER_MESSAGE) -> None:
+    def __init__(self, maxJumps: int = 1000) -> None:
         self.jumps = 0
         self.maxJumps = maxJumps
 
@@ -644,16 +635,15 @@ class Name:
     @ivar name: A byte string giving the name.
     @type name: L{bytes}
 
-    @cvar maxCompressionPointers: Per-message cap on the total number of
+    @ivar maxCompressionPointers: Per-message cap on the total number of
         compression-pointer dereferences L{decode} will follow before
-        raising L{DNSDecodeError}.  Defined as a class attribute so
-        subclasses (and, in the future, individual instances) may override
-        it to tune the trade-off between tolerance for legitimately
-        verbose messages and resistance to denial-of-service attacks.
-    @type maxCompressionPointers: L{int}
+        raising L{DNSDecodeError}.  Defaults to C{1000}.  Override it on
+        a subclass or individual instance to tune the trade-off between
+        tolerance for legitimately verbose messages and resistance to
+        denial-of-service attacks.
     """
 
-    maxCompressionPointers: int = MAX_COMPRESSION_POINTERS_PER_MESSAGE
+    maxCompressionPointers: int = 1000
 
     def __init__(self, name: bytes | str = b""):
         """
@@ -2610,7 +2600,16 @@ class Message(tputil.FancyEqMixin):
         header fields.
     @ivar _sectionNames: The names of attributes representing the record
         sections of this message.
+
+    @ivar maxCompressionPointers: Per-message cap on the total number of
+        compression-pointer dereferences L{decode} will follow across every
+        name in the message before raising L{DNSDecodeError}.  Defaults to
+        C{1000}.  Override it on a subclass or individual instance to tune
+        the trade-off between tolerance for legitimately verbose messages
+        and resistance to denial-of-service attacks.
     """
+
+    maxCompressionPointers: int = 1000
 
     compareAttributes = (
         "id",
@@ -2830,7 +2829,7 @@ class Message(tputil.FancyEqMixin):
         # performed across every name in this message.  It is installed on
         # the private context variable so nested record decoders pick it up
         # without needing to thread it through each signature.
-        decodeContext = _DecodeContext(maxJumps=Name.maxCompressionPointers)
+        decodeContext = _DecodeContext(maxJumps=self.maxCompressionPointers)
         with _installDecodeContext(decodeContext):
             self.queries = []
             for i in range(nqueries):
