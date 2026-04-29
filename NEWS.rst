@@ -11,6 +11,16 @@ https://twisted.org/trac/ticket/<number>
 Twisted 26.4.0rc1 (2026-04-29)
 ==============================
 
+This is the last release with support for Python 3.9.
+
+
+Security
+--------
+
+- twisted.names was fix for Denial of Service (DoS) attack via resource exhaustion during DNS name decompression.
+  Reported and fixed by Tomas Illuminati Balbin CVE-2026-42304 (#12626)
+
+
 Features
 --------
 
