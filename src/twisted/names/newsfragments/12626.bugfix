@@ -1,0 +1,1 @@
+twisted.names was fix for Denial of Service (DoS) attack via resource exhaustion during DNS name decompression. CVE-2026-42304
