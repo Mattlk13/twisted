@@ -506,9 +506,9 @@ class _DecodeContext:
 # guarantees the scope is restored correctly on exit -- and remains isolated
 # per-task should a future caller decode messages from multiple
 # L{asyncio}-style contexts concurrently.
-_decodeContextVar: contextvars.ContextVar[_DecodeContext | None] = (
-    contextvars.ContextVar("_dnsDecodeContext", default=None)
-)
+_decodeContextVar: contextvars.ContextVar[
+    _DecodeContext | None
+] = contextvars.ContextVar("_dnsDecodeContext", default=None)
 
 
 @contextmanager
