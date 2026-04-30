@@ -84,8 +84,10 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         @self.addCleanup
         def cleanUp():
             result.close()
+            # the cleanup function may be needed only in some circumstances
+            # see https://github.com/twisted/twisted/pull/11706
             if existingLoop is not None:
-                set_event_loop(existingLoop)
+                set_event_loop(existingLoop)  # pragma: nocov
             set_event_loop_policy(existingPolicy)
 
         return result
