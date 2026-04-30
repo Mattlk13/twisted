@@ -82,7 +82,7 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
             # For some cases, like GTK tests,
             # there might be a running reactor.
             # To revert the state found at the start of the test
-            # we keep a reference and restore it later. 
+            # we keep a reference and restore it later.
             existingLoop = None
         existingPolicy = get_event_loop_policy()
         result = policy.new_event_loop()
