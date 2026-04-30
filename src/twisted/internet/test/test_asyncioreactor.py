@@ -12,8 +12,8 @@ from asyncio import (
     DefaultEventLoopPolicy,
     Future,
     SelectorEventLoop,
-    get_event_loop,
     get_event_loop_policy,
+    get_running_loop,
     set_event_loop,
     set_event_loop_policy,
 )
@@ -74,14 +74,18 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         Make a new asyncio loop from a policy for use with a reactor, and add
         appropriate cleanup to restore any global state.
         """
-        existingLoop = get_event_loop()
+        try:
+            existingLoop = get_running_loop()
+        except RuntimeError:
+            existingLoop = None
         existingPolicy = get_event_loop_policy()
         result = policy.new_event_loop()
 
         @self.addCleanup
         def cleanUp():
             result.close()
-            set_event_loop(existingLoop)
+            if existingLoop is not None:
+                set_event_loop(existingLoop)
             set_event_loop_policy(existingPolicy)
 
         return result
