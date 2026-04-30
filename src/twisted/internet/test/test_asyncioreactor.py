@@ -76,7 +76,13 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         """
         try:
             existingLoop = get_running_loop()
-        except RuntimeError:  # raised when no event loop is running
+        except RuntimeError:  # pragma: no branch
+            # For most runs, we should not have any existing loop,
+            # since the tests should leave a clean reactor.
+            # For some cases, like GTK tests,
+            # there might be a running reactor.
+            # To revert the state found at the start of the test
+            # we keep a reference and restore it later. 
             existingLoop = None
         existingPolicy = get_event_loop_policy()
         result = policy.new_event_loop()
