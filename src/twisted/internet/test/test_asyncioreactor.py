@@ -76,7 +76,7 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         """
         try:
             existingLoop = get_running_loop()
-        except RuntimeError:
+        except RuntimeError:  # raised when no event loop is running
             existingLoop = None
         existingPolicy = get_event_loop_policy()
         result = policy.new_event_loop()
