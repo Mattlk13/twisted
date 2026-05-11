@@ -212,12 +212,12 @@ jobs:
           # Future Python 3.15 work in progress.
           # These tests might have various exceptions and
           # we will remove the exceptions as support is added.
-          - python-version: '3.15.0-beta'
+          - python-version: '3.15.0-beta.1'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-linux'
             runs-on: 'ubuntu-22.04'
 
-          - python-version: '3.15.0-beta'
+          - python-version: '3.15.0-beta.1'
             tox-env: 'nodeps-withcov-windows'
             job-name: 'nodeps-windows-select'
             runs-on: 'windows-2022'
@@ -225,7 +225,7 @@ jobs:
             # https://github.com/twisted/twisted/issues/12521
             trial-args: '--reactor=select'
 
-          - python-version: '3.15.0-beta'
+          - python-version: '3.15.0-beta.1'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-macos'
             runs-on: 'macos-14'
@@ -270,12 +270,11 @@ jobs:
         # https://gitlab.gnome.org/GNOME/pygobject/-/blob/3.42.0/setup.py#L129-L134
         sudo apt-get update
         sudo apt-get install -y \
-          libgirepository1.0-dev \
+          libgirepository-2.0-dev \
           libglib2.0-dev \
           libcairo2-dev \
           libffi-dev \
           gir1.2-gtk-3.0 \
-          girepository-2.0 \
           xvfb
 
     - name: Test
