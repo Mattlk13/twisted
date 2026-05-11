@@ -55,7 +55,7 @@ jobs:
     # We can't use `env.*` in the job name, only in the steps.
     name: ${{ matrix.python-version }}-${{ matrix.job-name || 'default-tests' }}
     # We have Ubuntu as the base for running agains multiple Python versions.
-    runs-on: "${{ matrix.runs-on || 'ubuntu-22.04' }}"
+    runs-on: "${{ matrix.runs-on || 'ubuntu-24.04' }}"
     env:
       # By default we run all tests with all deps with coverage.
       TOXENV: "${{ matrix.tox-env || 'alldeps-withcov-posix' }}"
@@ -116,7 +116,7 @@ jobs:
           - python-version: '3.10.20'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
-            runs-on: 'ubuntu-22.04'
+            runs-on: 'ubuntu-24.04'
 
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
@@ -203,6 +203,7 @@ jobs:
           # of Gtk packaged within our selected version of Linux above.
           # This is executed using the oldest Python that we support.
           - python-version: '3.10'
+            runs-on: 'ubuntu-24.04'
             tox-env: 'alldeps-gtk-withcov-posix'
             platform-deps: 'gtk-platform'
             tox-wrapper: 'xvfb-run -a'
@@ -215,7 +216,7 @@ jobs:
           - python-version: '3.15.0-beta.1'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-linux'
-            runs-on: 'ubuntu-22.04'
+            runs-on: 'ubuntu-24.04'
 
           - python-version: '3.15.0-beta.1'
             tox-env: 'nodeps-withcov-windows'
@@ -319,7 +320,9 @@ jobs:
   coverage-report:
     name: Coverage report
     runs-on: ubuntu-latest
-    if: always()  # Always run the coverage report, even when the tests fail.
+    # Always run the coverage report, even when the tests fail.
+    # As long as the job is not cancelled.
+    if: ${{ !cancelled() }}
     needs:
       - testing  # Code coverage only needs to wait for test jobs.
     steps:
@@ -446,7 +449,7 @@ jobs:
 
 
   static-checks:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       TOX_PARALLEL_NO_SPINNER: 1
 
@@ -477,7 +480,7 @@ jobs:
   # The actual docs are built and published via Read The Docs.
   apidocs:
     name: API docs build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v6
     - name: Set up Python
@@ -494,7 +497,7 @@ jobs:
 
   narrativedocs:
     name: Narrative docs build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v6
     - name: Set up Python
@@ -517,7 +520,7 @@ jobs:
   # The files are published only when a tag is created using the next job, release-publish
   release-build:
     name: Build and check release, then upload artifact
-    runs-on: 'ubuntu-22.04'
+    runs-on: 'ubuntu-24.04'
     steps:
     - uses: actions/checkout@v6
 
@@ -582,7 +585,7 @@ jobs:
   all-successful:
     # Is very important to force running this always, as otherwise it will be
     #  skipped by default.
-    if: always()
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     # Here should be the list of all the other jobs defined in this file.
     needs:
