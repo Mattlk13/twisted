@@ -24,11 +24,11 @@ authors = [
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "zope.interface >= 5",
@@ -51,7 +51,7 @@ dependencies = [
 # We trust semantic versioning and auto-upgrading to a bugfix release
 # should be OK.
 test = [
-    "cython-test-exception-raiser >= 1.0.2, <2",
+    "cython-test-exception-raiser ~= 26.4.1",
     "PyHamcrest >= 2",
     "hypothesis >= 6.56",
     "httpx[http2] >= 0.27",

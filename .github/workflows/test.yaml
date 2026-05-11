@@ -113,7 +113,7 @@ jobs:
           # by GitHub. The availability of the Python version
           # depends on the version of Ubuntu in use.
           # See https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
-          - python-version: '3.9.12'
+          - python-version: '3.10.20'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
             runs-on: 'ubuntu-22.04'
@@ -124,13 +124,10 @@ jobs:
           # We go with latest micro release for the smallest minor release
           # that we support.
           # This is also used to run tests with minimum dependency versions.
-          - python-version: '3.9'
+          - python-version: '3.10'
             noipv6: '-noipv6'
             tox-env: 'mindeps-withcov-posix'
             job-name: 'minimum-deps-noipv6'
-
-          # Just Python 3.9 with default settings.
-          - python-version: '3.9'
 
           # Just Python 3.10 with default settings.
           - python-version: '3.10'
@@ -141,21 +138,24 @@ jobs:
           # Just Python 3.13 with default settings.
           - python-version: '3.13'
 
-          # Newest Intel macOS and oldest Python (major) supported versions.
-          # On 3.9 pyobjc-core build fails.
+          # Just Python 3.14 with default settings.
+          - python-version: '3.14'
+
+          # Oldest Intel macOS (available on GitHub)
+          # and oldest Python (major) supported versions.
           - python-version: '3.10'
             runs-on: 'macos-14'
             job-name: 'macos-14-default-tests'
             tox-env: 'macos-withcov-alldeps'
 
           # Newest ARM macOS and newest Python supported versions.
-          - python-version: '3.13'
+          - python-version: '3.14'
             runs-on: 'macos-15'
             job-name: 'macos-15-default-tests'
             tox-env: 'macos-withcov-alldeps'
 
           # Windows, minimum Python version with select reactor.
-          - python-version: '3.9'
+          - python-version: '3.10'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-select'
@@ -164,12 +164,22 @@ jobs:
             # select a reactor.
             trial-args: '--reactor=select'
 
+          # Windows, newest Python supported version with select reactor.
+          - python-version: '3.14'
+            tox-env: 'nodeps-withcov-windows'
+            job-name: 'nodeps-windows-select'
+            runs-on: 'windows-2022'
+            # Should be removed once we can run distributed tests on Windows
+            # https://github.com/twisted/twisted/issues/12521
+            trial-args: '--reactor=select'
+
           # Windows, newest Python supported version with iocp reactor.
-          - python-version: '3.13'
+          - python-version: '3.14'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
             # Distributed trial is not yet suported on Windows.
+            # https://github.com/twisted/twisted/issues/12521
             trial-args: '--reactor=iocp'
 
           # On PYPY coverage is very slow (5min vs 30min) as there is no C
@@ -191,30 +201,14 @@ jobs:
           # We run the full test suite with the GI reactor against an X virtual
           # framebuffer server.  This covers our integration with the version
           # of Gtk packaged within our selected version of Linux above.
-          - python-version: '3.9'
+          # This is executed using the oldest Python that we support.
+          - python-version: '3.10'
             tox-env: 'alldeps-gtk-withcov-posix'
             platform-deps: 'gtk-platform'
             tox-wrapper: 'xvfb-run -a'
             job-name: 'gtk-tests'
             trial-args: '--reactor=gi -j 4'
 
-          - python-version: '3.14'
-            tox-env: 'nodeps-withcov-posix'
-            job-name: 'nodeps-linux'
-            runs-on: 'ubuntu-22.04'
-
-          - python-version: '3.14'
-            tox-env: 'nodeps-withcov-windows'
-            job-name: 'nodeps-windows-select'
-            runs-on: 'windows-2022'
-            # Should be removed once we can run distributed tests on Windows
-            # https://github.com/twisted/twisted/issues/12521
-            trial-args: '--reactor=select'
-
-          - python-version: '3.14'
-            tox-env: 'nodeps-withcov-posix'
-            job-name: 'nodeps-macos'
-            runs-on: 'macos-14'
 
     steps:
     - uses: actions/checkout@v6
