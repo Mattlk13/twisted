@@ -16,7 +16,7 @@ import inspect
 import random
 import socket
 import struct
-from collections.abc import Sequence
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from io import BytesIO
 from itertools import chain
@@ -506,13 +506,13 @@ class _DecodeContext:
 # guarantees the scope is restored correctly on exit -- and remains isolated
 # per-task should a future caller decode messages from multiple
 # L{asyncio}-style contexts concurrently.
-_decodeContextVar: contextvars.ContextVar[_DecodeContext | None] = (
-    contextvars.ContextVar("_dnsDecodeContext", default=None)
-)
+_decodeContextVar: contextvars.ContextVar[
+    _DecodeContext | None
+] = contextvars.ContextVar("_dnsDecodeContext", default=None)
 
 
 @contextmanager
-def _installDecodeContext(context: _DecodeContext):
+def _installDecodeContext(context: _DecodeContext) -> Generator[_DecodeContext]:
     """
     Install C{context} on L{_decodeContextVar} for the duration of the
     C{with} block and restore the previous value on exit.

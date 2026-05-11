@@ -364,9 +364,7 @@ class NameTests(unittest.TestCase):
         payload = b"\xc0\x02\xc0\x04\xc0\x06\xc0\x08\x00"
         name = dns.Name()
         name.maxCompressionPointers = 3
-        self.assertRaises(
-            dns.DNSDecodeError, name.decode, BytesIO(payload)
-        )
+        self.assertRaises(dns.DNSDecodeError, name.decode, BytesIO(payload))
 
     def test_decodeRecoversAfterDNSDecodeError(self):
         """
@@ -818,9 +816,7 @@ class MessageTests(unittest.SynchronousTestCase):
         """
         chainLength = 100
         numRecords = 8000
-        header = struct.pack(
-            "!H2B4H", 0x1234, 0x80, 0x00, 0, numRecords, 0, 0
-        )
+        header = struct.pack("!H2B4H", 0x1234, 0x80, 0x00, 0, numRecords, 0, 0)
 
         # Long compression chain inside the RDATA of an unknown
         # record so that subsequent records can aim pointers at it.
@@ -831,11 +827,7 @@ class MessageTests(unittest.SynchronousTestCase):
             chain += struct.pack("!H", 0xC000 | (chainBase + 2 * (i + 1)))
         chain += b"\x04test\x00"
 
-        firstRecord = (
-            owner
-            + struct.pack("!HHIH", 999, 1, 0, len(chain))
-            + bytes(chain)
-        )
+        firstRecord = owner + struct.pack("!HHIH", 999, 1, 0, len(chain)) + bytes(chain)
         followupRecord = (
             struct.pack("!H", 0xC000 | chainBase)
             + struct.pack("!HHIH", 1, 1, 0, 4)
