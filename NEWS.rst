@@ -8,10 +8,11 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
-Twisted 26.4.0rc1 (2026-04-29)
-==============================
+Twisted 26.4.0 (2026-05-11)
+===========================
 
 This is the last release with support for Python 3.9.
+No changes since 26.4.0rc2.
 
 
 Security
@@ -37,7 +38,7 @@ Features
 Bugfixes
 --------
 
-- twisted.internet.mail will now return a meaningful Failure when TLS validation fails. (#10210)
+- twisted.mail.smtp will now return a meaningful Failure when TLS validation fails. (#10210)
 - TLS version range constraints passed to twisted.internet.ssl.CertificateOptions are now properly respected rather than excluding the version being passed as the desired constraint. (#10232)
 - A potential reference cycle that might cause intermittent memory spikes while
   using twisted.internet.defer.inlineCallbacks was removed. (#12120)
