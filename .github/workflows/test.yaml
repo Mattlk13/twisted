@@ -530,7 +530,9 @@ jobs:
 
     - name: Check matched tag version and branch version - on tag
       if: startsWith(github.ref, 'refs/tags/twisted-')
-      run: python admin/check_tag_version_match.py "${{ github.ref }}"
+      run: |
+        python -m pip install pep517==0.13.1
+        python admin/check_tag_version_match.py "${{ github.ref }}"
 
   # Used exclusively for PyPi release publishing.
   # This is only executed on tags and only does the publishing.

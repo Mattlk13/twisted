@@ -16,7 +16,7 @@ import inspect
 import random
 import socket
 import struct
-from collections.abc import Sequence
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from io import BytesIO
 from itertools import chain
@@ -512,7 +512,7 @@ _decodeContextVar: contextvars.ContextVar[
 
 
 @contextmanager
-def _installDecodeContext(context: _DecodeContext):
+def _installDecodeContext(context: _DecodeContext) -> Generator[_DecodeContext]:
     """
     Install C{context} on L{_decodeContextVar} for the duration of the
     C{with} block and restore the previous value on exit.
