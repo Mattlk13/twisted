@@ -110,9 +110,9 @@ all-non-platform = [
 
 macos-platform = [
     "twisted[all-non-platform]",
-    "pyobjc-core >= 12 ; python_version >= '3.10'",
-    "pyobjc-framework-CFNetwork >= 12; python_version >= '3.10'",
-    "pyobjc-framework-Cocoa >= 12; python_version >= '3.10'",
+    "pyobjc-core >= 12",
+    "pyobjc-framework-CFNetwork >= 12",
+    "pyobjc-framework-Cocoa >= 12",
 ]
 
 windows-platform = [
@@ -127,8 +127,7 @@ osx-platform = [
 
 gtk-platform = [
     "twisted[all-non-platform]",
-    "pygobject; python_version >= '3.10'",
-    "pygobject < 3.52.1; python_version < '3.10'",
+    "pygobject",
 ]
 
 mypy = [
@@ -280,7 +279,7 @@ include = [
         showcontent = false
 
 [tool.black]
-target-version = ['py39', 'py310', 'py311', 'py312']
+target-version = ['py310', 'py311', 'py312', 'py313', 'py314', 'py315']
 
 [tool.isort]
 profile = "black"
