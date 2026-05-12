@@ -278,8 +278,10 @@ include = [
         name = "Misc"
         showcontent = false
 
+# Next time you need to work on black consider migration to ruff
+# https://github.com/twisted/twisted/issues/12646
 [tool.black]
-target-version = ['py310', 'py311', 'py312', 'py313', 'py314', 'py315']
+target-version = ['py310', 'py311', 'py312']
 
 [tool.isort]
 profile = "black"
