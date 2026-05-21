@@ -17,7 +17,7 @@ from dis import distb
 from io import StringIO
 from traceback import FrameSummary
 from types import TracebackType
-from typing import Any, cast
+from typing import Any
 from unittest import skipIf
 
 from cython_test_exception_raiser import raiser
@@ -31,7 +31,7 @@ class ComparableException(Exception):
 
     def __eq__(self, other: object) -> bool:
         return (self.__class__ == other.__class__) and (
-            self.args == cast(ComparableException, other).args
+            self.args == ComparableException.args
         )
 
 
