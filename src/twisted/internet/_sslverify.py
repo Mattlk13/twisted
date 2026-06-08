@@ -521,9 +521,11 @@ class CertificateRequest(CertBase):
     @type original: L{cryptography.x509.CertificateSigningRequest}
     """
 
+    original: x509.CertificateSigningRequest
+
     @classmethod
     def load(
-        cls, requestData: bytes, requestFormat=crypto.FILETYPE_ASN1
+        cls, requestData: bytes, requestFormat: int = crypto.FILETYPE_ASN1
     ) -> CertificateRequest:
         if requestFormat == crypto.FILETYPE_ASN1:
             req = x509.load_der_x509_csr(requestData)
@@ -554,7 +556,7 @@ class CertificateRequest(CertBase):
             setattr(dn, name, attribute.value)
         return dn
 
-    def dump(self, format=crypto.FILETYPE_ASN1) -> bytes:
+    def dump(self, format: int = crypto.FILETYPE_ASN1) -> bytes:
         if format == crypto.FILETYPE_ASN1:
             return self.original.public_bytes(serialization.Encoding.DER)
         elif format == crypto.FILETYPE_PEM:
