@@ -3545,9 +3545,7 @@ class CertificateRequestTests(SynchronousTestCase):
         key = ec.generate_private_key(ec.SECP256R1(), backend=default_backend())
         csr = (
             x509.CertificateSigningRequestBuilder()
-            .subject_name(
-                x509.Name([x509.NameAttribute(NameOID.GIVEN_NAME, "Alice")])
-            )
+            .subject_name(x509.Name([x509.NameAttribute(NameOID.GIVEN_NAME, "Alice")]))
             .sign(key, hashes.SHA256())
         )
         request = sslverify.CertificateRequest(csr)
