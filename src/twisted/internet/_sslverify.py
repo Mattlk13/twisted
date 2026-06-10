@@ -518,7 +518,6 @@ class CertificateRequest(CertBase):
     returned resulting in an actual certificate.
 
     @ivar original: The underlying CSR object.
-    @type original: L{cryptography.x509.CertificateSigningRequest}
     """
 
     original: x509.CertificateSigningRequest
