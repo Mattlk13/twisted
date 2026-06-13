@@ -2861,8 +2861,9 @@ class Message(tputil.FancyEqMixin):
 
         @param type: A record type, such as C{A} or L{NS}.
 
-        @return: An object which implements L{IRecord} or L{None} if none
-            can be found for the given type.
+        @return: An object which implements L{IRecord} or L{IEncodable}.
+        L{UnknownRecord} is returned if no implementation can be found for
+        the given type.
         """
         return self._recordTypes.get(type, UnknownRecord)
 
