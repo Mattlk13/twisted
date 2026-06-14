@@ -20,7 +20,7 @@ from collections.abc import Callable, Generator, Sequence
 from contextlib import contextmanager
 from io import BytesIO
 from itertools import chain
-from typing import IO, ClassVar, SupportsInt, overload
+from typing import IO, ClassVar, SupportsInt, TypeAlias, overload
 
 from zope.interface import Attribute, Interface, implementer
 
@@ -2561,6 +2561,9 @@ def _compactRepr(
     return "".join(out)
 
 
+_RecordParser: TypeAlias = Callable[..., IEncodableRecord]
+
+
 class Message(tputil.FancyEqMixin):
     """
     L{Message} contains all the information represented by a single
@@ -2845,7 +2848,6 @@ class Message(tputil.FancyEqMixin):
     # classes.  This relies on the global state which has been created so
     # far in initializing this module (so don't define Record classes after
     # this).
-    _RecordParser = Callable[..., IEncodableRecord]
     _recordTypes: ClassVar[dict[int, _RecordParser]] = {}
     for name in globals():
         if name.startswith("Record_"):
