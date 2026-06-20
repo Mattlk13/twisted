@@ -7,7 +7,7 @@ Address objects for network connections.
 
 
 import os
-from typing import Literal, Optional, Union
+from typing import Literal
 
 from zope.interface import implementer
 
@@ -35,7 +35,7 @@ class IPv4Address:
     @type port: C{int}
     """
 
-    type: Union[Literal["TCP"], Literal["UDP"]] = attr.ib(
+    type: Literal["TCP"] | Literal["UDP"] = attr.ib(
         validator=attr.validators.in_(["TCP", "UDP"])
     )
     host: str
@@ -67,13 +67,13 @@ class IPv6Address:
     @type scopeID: L{int} or L{str}
     """
 
-    type: Union[Literal["TCP"], Literal["UDP"]] = attr.ib(
+    type: Literal["TCP"] | Literal["UDP"] = attr.ib(
         validator=attr.validators.in_(["TCP", "UDP"])
     )
     host: str
     port: int
     flowInfo: int = 0
-    scopeID: Union[str, int] = 0
+    scopeID: str | int = 0
 
 
 @implementer(IAddress)
@@ -110,9 +110,7 @@ class UNIXAddress:
     @type name: C{bytes}
     """
 
-    name: Optional[bytes] = attr.ib(
-        converter=attr.converters.optional(_asFilesystemBytes)
-    )
+    name: bytes | None = attr.ib(converter=attr.converters.optional(_asFilesystemBytes))
 
     if getattr(os.path, "samefile", None) is not None:
 
