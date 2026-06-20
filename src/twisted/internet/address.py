@@ -8,7 +8,6 @@ Address objects for network connections.
 
 import os
 from typing import Literal, Optional, Union
-from warnings import warn
 
 from zope.interface import implementer
 
@@ -157,25 +156,3 @@ class UNIXAddress:
             return hash((s1.st_ino, s1.st_dev))
         except OSError:
             return hash(self.name)
-
-
-# These are for buildFactory backwards compatibility due to
-# stupidity-induced inconsistency.
-
-
-class _ServerFactoryIPv4Address(IPv4Address):
-    """Backwards compatibility hack. Just like IPv4Address in practice."""
-
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, tuple):
-            warn(
-                "IPv4Address.__getitem__ is deprecated.  " "Use attributes instead.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-            return (self.host, self.port) == other
-        elif isinstance(other, IPv4Address):
-            a = (self.type, self.host, self.port)
-            b = (other.type, other.host, other.port)
-            return a == b
-        return NotImplemented
