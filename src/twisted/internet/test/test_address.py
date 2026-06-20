@@ -201,6 +201,24 @@ class UNIXAddressTests(SynchronousTestCase):
                 hash(UNIXAddress(self._socketAddress)), hash(UNIXAddress(linkName))
             )
 
+    def test_comparisonOfMissingFiles(self):
+        """
+        UNIXAddress objects for different missing filesystem paths are not
+        equal.
+        """
+        self.assertNotEqual(
+            UNIXAddress(self._socketAddress), UNIXAddress(self._otherAddress)
+        )
+
+    def test_abstractNamespaceComparisonRaises(self):
+        """
+        Outside Linux, comparing abstract namespace paths raises the
+        L{ValueError} from L{os.path.samefile}.
+        """
+        self.patch(platform, "isLinux", lambda: False)
+        with self.assertRaises(ValueError):
+            self.assertEqual(UNIXAddress(b"\0socket"), UNIXAddress(b"\0other"))
+
 
 @skipIf(unixSkip, "platform doesn't support UNIX sockets.")
 class EmptyUNIXAddressTests(SynchronousTestCase, AddressTestCaseMixin):
