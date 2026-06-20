@@ -210,14 +210,22 @@ class UNIXAddressTests(SynchronousTestCase):
             UNIXAddress(self._socketAddress), UNIXAddress(self._otherAddress)
         )
 
+    @skipIf(platform.isLinux(), "Linux supports abstract namespace sockets.")
     def test_abstractNamespaceComparisonRaises(self):
         """
-        Outside Linux, comparing abstract namespace paths raises the
-        L{ValueError} from L{os.path.samefile}.
+        Comparing abstract namespace paths raises the L{ValueError} from
+        L{os.path.samefile}.
         """
-        self.patch(platform, "isLinux", lambda: False)
         with self.assertRaises(ValueError):
             self.assertEqual(UNIXAddress(b"\0socket"), UNIXAddress(b"\0other"))
+
+    @skipIf(not platform.isLinux(), "Abstract namespace sockets are Linux-only.")
+    def test_abstractNamespaceComparisonDoesNotRaiseOnLinux(self):
+        """
+        On Linux, comparing abstract namespace paths does not raise
+        L{ValueError}.
+        """
+        self.assertNotEqual(UNIXAddress(b"\0socket"), UNIXAddress(b"\0other"))
 
 
 @skipIf(unixSkip, "platform doesn't support UNIX sockets.")
