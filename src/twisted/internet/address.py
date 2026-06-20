@@ -29,10 +29,8 @@ class IPv4Address:
 
     @ivar host: A string containing a dotted-quad IPv4 address; for example,
         "127.0.0.1".
-    @type host: C{str}
 
     @ivar port: An integer representing the port number.
-    @type port: C{int}
     """
 
     type: Literal["TCP"] | Literal["UDP"] = attr.ib(
@@ -53,18 +51,14 @@ class IPv6Address:
 
     @ivar host: A string containing a colon-separated, hexadecimal formatted
         IPv6 address; for example, "::1".
-    @type host: C{str}
 
     @ivar port: An integer representing the port number.
-    @type port: C{int}
 
     @ivar flowInfo: the IPv6 flow label.  This can be used by QoS routers to
         identify flows of traffic; you may generally safely ignore it.
-    @type flowInfo: L{int}
 
     @ivar scopeID: the IPv6 scope identifier - roughly analagous to what
         interface traffic destined for this address must be transmitted over.
-    @type scopeID: L{int} or L{str}
     """
 
     type: Literal["TCP"] | Literal["UDP"] = attr.ib(
@@ -90,10 +84,8 @@ class HostnameAddress:
     A L{HostnameAddress} represents the address of a L{HostnameEndpoint}.
 
     @ivar hostname: A hostname byte string; for example, b"example.com".
-    @type hostname: L{bytes}
 
     @ivar port: An integer representing the port number.
-    @type port: L{int}
     """
 
     hostname: bytes
@@ -107,7 +99,6 @@ class UNIXAddress:
     Object representing a UNIX socket endpoint.
 
     @ivar name: The filename associated with this socket.
-    @type name: C{bytes}
     """
 
     name: bytes | None = attr.ib(converter=attr.converters.optional(_asFilesystemBytes))
