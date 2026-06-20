@@ -137,7 +137,7 @@ class UNIXAddress:
         show = _coerceToFilesystemEncoding("", name) if name is not None else None
         return f"UNIXAddress({show!r})"
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         if self.name is None:
             return hash((self.__class__, None))
         try:
