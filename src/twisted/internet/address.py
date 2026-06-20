@@ -103,34 +103,25 @@ class UNIXAddress:
 
     name: bytes | None = attr.ib(converter=attr.converters.optional(_asFilesystemBytes))
 
-    if getattr(os.path, "samefile", None) is not None:
-
-        def __eq__(self, other: object) -> bool:
-            """
-            Overriding C{attrs} to ensure the os level samefile
-            check is done if the name attributes do not match.
-            """
-            if not isinstance(other, self.__class__):
-                return NotImplemented
-            res = self.name == other.name
-            if not res and self.name and other.name:
-                try:
-                    return os.path.samefile(self.name, other.name)
-                except OSError:
-                    pass
-                except (TypeError, ValueError) as e:
-                    # On Linux, abstract namespace UNIX sockets start with a
-                    # \0, which os.path doesn't like.
-                    if not platform.isLinux():
-                        raise e
-            return res
-
-    else:
-
-        def __eq__(self, other: object) -> bool:
-            if isinstance(other, self.__class__):
-                return self.name == other.name
+    def __eq__(self, other: object) -> bool:
+        """
+        Overriding C{attrs} to ensure the os level samefile
+        check is done if the name attributes do not match.
+        """
+        if not isinstance(other, self.__class__):
             return NotImplemented
+        res = self.name == other.name
+        if not res and self.name and other.name:
+            try:
+                return os.path.samefile(self.name, other.name)
+            except OSError:
+                pass
+            except (TypeError, ValueError) as e:
+                # On Linux, abstract namespace UNIX sockets start with a
+                # \0, which os.path doesn't like.
+                if not platform.isLinux():
+                    raise e
+        return res
 
     def __repr__(self) -> str:
         name = self.name
