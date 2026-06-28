@@ -95,7 +95,7 @@ def isPackageDirectory(dirname):
 
 
 @deprecated(Version("Twisted", "NEXT", 0, 0), replacement="os.path.samefile")
-def samefile(filename1, filename2):
+def samefile(filename1: str, filename2: str) -> bool:
     """
     A hacky implementation of C{os.path.samefile}. Do not use this.
     """

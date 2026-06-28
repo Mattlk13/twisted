@@ -981,7 +981,7 @@ class DestructiveTestSuiteTests(unittest.SynchronousTestCase):
 
 
 class RunnerDeprecationTests(unittest.SynchronousTestCase):
-    def test_samefile(self):
+    def test_samefile(self) -> None:
         """
         Test that L{runner.samefile} is deprecated.
         """
