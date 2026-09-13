@@ -8,7 +8,7 @@ Report a security issue
 We take security very seriously.
 Your input and feedback on our security is always appreciated.
 
-For DoS (Denial of Service) issues check the dedicates section below.
+For DoS (Denial of Service) issues check the dedicated section below.
 
 You can send urgent or sensitive reports via `GitHub Security Advisory <https://github.com/twisted/twisted/security/advisories/new>`_.
 
